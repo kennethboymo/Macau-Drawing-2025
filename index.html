@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消費大獎賞2025</title>
+    <style>
+        :root {
+            --primary-color: #28a745;
+            --secondary-color: #dc3545;
+            --border-radius: 5px;
+            --padding: 10px;
+            --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--padding);
+        }
+        .container {
+            max-width: 100%;
+            width: 100%;
+            background: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+        .time-info {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        #recordForm {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--padding);
+            margin-bottom: 15px;
+        }
+        #recordForm > div {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            align-items: center;
+        }
+        #recordForm label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            min-width: 40px;
+        }
+        #recordForm select,
+        #recordForm input[type="checkbox"] {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+        #recordForm select {
+            flex-grow: 1;
+        }
+        #recordForm button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: var(--padding);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        #recordForm button:hover {
+            background-color: #1e7e34;
+        }
+        .filters {
+            display: flex;
+            flex-direction: row;
+            gap: var(--padding);
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .filters > div {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+        }
+        .filters label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .filters select,
+        .filters button {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+        .filters button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .filters button:hover {
+            background-color: #1e7e34;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 15px;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70px;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tbody tr.used {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .export-button {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: var(--padding);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        .export-button:hover {
+            background-color: #c82333;
+        }
+        .import-button {
+            background-color: #007bff;
+            color: white;
+            padding: var(--padding);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        .import-button:hover {
+            background-color: #0069d9;
+        }
+        .draw-row {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            align-items: center;
+        }
+        .draw-row label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            min-width: 30px;
+        }
+        .draw-row select {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+        .summary-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        @media (max-width: 480px) {
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filters > div {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            th, td {
+                font-size: 0.7rem;
+                padding: 3px;
+            }
+            .draw-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>消費大獎賞2025</h2>
+        <div class="time-info" id="timeInfo"></div>
+
+        <form id="recordForm">
+            <div>
+                <label for="platform">平台:</label>
+                <select id="platform" required>
+                    <option value="">請選擇</option>
+                    <option>Alipay</option>
+                    <option>BOC</option>
+                    <option>GFB</option>
+                    <option>ICBC</option>
+                    <option>Luso</option>
+                    <option>MPay</option>
+                    <option>TFB</option>
+                    <option>UePay</option>
+                </select>
+            </div>
+            <div>
+                <label for="giveUp">
+                    <input type="checkbox" id="giveUp"> 冇抽
+                </label>
+            </div>
+            <div class="draw-row">
+                <label>券:</label>
+                <select id="draw1" class="draw-select">
+                    <option value="-">-</option>
+                    <option>10</option>
+                    <option>20</option>
+                    <option>50</option>
+                    <option>100</option>
+                    <option>200</option>
+                </select>
+                <select id="draw2" class="draw-select">
+                    <option value="-">-</option>
+                    <option>10</option>
+                    <option>20</option>
+                    <option>50</option>
+                    <option>100</option>
+                    <option>200</option>
+                </select>
+                <select id="draw3" class="draw-select">
+                    <option value="-">-</option>
+                    <option>10</option>
+                    <option>20</option>
+                    <option>50</option>
+                    <option>100</option>
+                    <option>200</option>
+                </select>
+            </div>
+            <button type="button" onclick="addRecord()">提交</button>
+        </form>
+
+        <div class="filters">
+            <div>
+                <label for="filterWeek">周數:</label>
+                <select id="filterWeek">
+                    <option value="">全部</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div>
+                <label for="filterPlatform">平台:</label>
+                <select id="filterPlatform">
+                    <option value="">全部</option>
+                    <option>Alipay</option>
+                    <option>BOC</option>
+                    <option>GFB</option>
+                    <option>ICBC</option>
+                    <option>Luso</option>
+                    <option>MPay</option>
+                    <option>TFB</option>
+                    <option>UePay</option>
+                </select>
+            </div>
+            <button onclick="filterRecords()">篩選</button>
+        </div>
+
+        <div class="summary-info" id="weeklySummary">
+            本周消費券：MOP 0<br>需消費：MOP 0
+        </div>
+
+        <div class="table-container">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>周數</th>
+                        <th>平台</th>
+                        <th>券1</th>
+                        <th>券2</th>
+                        <th>券3</th>
+                        <th>消費</th>
+                        <th>已使用</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <button class="export-button" onclick="exportCSV()">匯出 CSV</button>
+        <button class="import-button" onclick="document.getElementById('fileInput').click()">匯入 CSV</button>
+        <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function getWeekNumber(date) {
+                const startOfFirstWeek = new Date(2025, 2, 24); // 2025年3月24日為第一周開始
+                const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+                return Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
+            }
+
+            function formatNumber(num) {
+                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+            function updateTimeInfo() {
+                const now = new Date();
+                const weekNumber = getWeekNumber(now);
+                const options = { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: false
+                };
+                const timeString = now.toLocaleString('zh-HK', options);
+                document.getElementById('timeInfo').innerHTML = 
+                    `現在時間是：${timeString}<br>本周是活動第${weekNumber}周`;
+                return weekNumber;
+            }
+
+            function updateWeeklySummary() {
+                const currentWeek = getWeekNumber(new Date());
+                const records = JSON.parse(localStorage.getItem('records')) || [];
+                const weeklyRecords = records.filter(record => parseInt(record.week) === currentWeek);
+                
+                let totalCoupons = 0;
+                let totalConsumption = 0;
+                
+                weeklyRecords.forEach(record => {
+                    if (record.draw1 !== "ND") totalCoupons += parseInt(record.draw1) || 0;
+                    if (record.draw2 !== "ND") totalCoupons += parseInt(record.draw2) || 0;
+                    if (record.draw3 !== "ND") totalCoupons += parseInt(record.draw3) || 0;
+                    totalConsumption += parseInt(record.consumption) || 0;
+                });
+                
+                document.getElementById('weeklySummary').innerText = 
+                    `本周消費券：MOP ${formatNumber(totalCoupons)}\n需消費：MOP ${formatNumber(totalConsumption)}`;
+
+                // 然後用CSS選擇器來改變顏色
+                const summaryElement = document.getElementById('weeklySummary');
+                summaryElement.style.color = 'green'; // 將整個元素的文字設為綠色
+            }
+
+            const currentWeek = updateTimeInfo();
+            setInterval(updateTimeInfo, 1000);
+
+            function calculateConsumption(draw1, draw2, draw3) {
+                const values = [draw1, draw2, draw3].map(val => parseInt(val) || 0);
+                const sum = values.reduce((a, b) => a + b, 0);
+                return isNaN(sum) ? 0 : sum * 3;
+            }
+
+            function saveRecords() {
+                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
+                const rows = table.rows;
+                const records = [];
+                for (let row of rows) {
+                    const week = row.cells[0].innerText;
+                    const platform = row.cells[1].innerText;
+                    const draw1 = row.cells[2].innerText;
+                    const draw2 = row.cells[3].innerText;
+                    const draw3 = row.cells[4].innerText;
+                    const consumption = row.cells[5].innerText.replace(/,/g, '');
+                    const used = row.cells[6].querySelector('input').checked;
+                    records.push({ week, platform, draw1, draw2, draw3, consumption, used });
+                }
+                localStorage.setItem('records', JSON.stringify(records));
+                updatePlatformOptions();
+                updateWeeklySummary();
+            }
+
+            function loadRecords() {
+                const records = JSON.parse(localStorage.getItem('records')) || [];
+                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
+                table.innerHTML = '';
+                records.forEach(record => {
+                    const newRow = table.insertRow();
+                    const consumption = calculateConsumption(record.draw1, record.draw2, record.draw3);
+                    newRow.innerHTML = `
+                        <td>${record.week}</td>
+                        <td>${record.platform}</td>
+                        <td>${record.draw1}</td>
+                        <td>${record.draw2}</td>
+                        <td>${record.draw3}</td>
+                        <td>${formatNumber(consumption)}</td>
+                        <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed(this)"></td>
+                        <td><button onclick="deleteRecord(this)">刪除</button></td>
+                    `;
+                    if (record.used) {
+                        newRow.classList.add('used');
+                    }
+                });
+                updatePlatformOptions();
+                updateWeeklySummary();
+                
+                // Set the filter to current week by default
+                document.getElementById('filterWeek').value = currentWeek;
+                filterRecords();
+            }
+
+            window.deleteRecord = function(button) {
+                if (confirm('確定要刪除此記錄嗎？')) {
+                    button.parentElement.parentElement.remove();
+                    saveRecords();
+                }
+            };
+
+            window.toggleUsed = function(checkbox) {
+                const row = checkbox.closest('tr');
+                if (checkbox.checked) {
+                    row.classList.add('used');
+                } else {
+                    row.classList.remove('used');
+                }
+                saveRecords();
+            };
+
+            function updatePlatformOptions() {
+                const platformSelect = document.getElementById("platform");
+                const currentWeek = getWeekNumber(new Date());
+                const records = JSON.parse(localStorage.getItem('records')) || [];
+                const usedPlatformsThisWeek = records
+                    .filter(record => parseInt(record.week) === currentWeek)
+                    .map(record => record.platform);
+
+                Array.from(platformSelect.options).forEach(option => {
+                    if (option.value && option.value !== "") {
+                        option.disabled = usedPlatformsThisWeek.includes(option.value);
+                    }
+                });
+            }
+
+            window.addRecord = function() {
+                const platform = document.getElementById("platform").value;
+                let draw1 = document.getElementById("draw1").value;
+                let draw2 = document.getElementById("draw2").value;
+                let draw3 = document.getElementById("draw3").value;
+                const giveUp = document.getElementById("giveUp").checked;
+
+                if (!platform) {
+                    alert("請選擇平台！");
+                    return;
+                }
+                if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
+                    alert("請選擇券1, 券2, 券3！");
+                    return;
+                }
+                if (giveUp) {
+                    draw1 = draw2 = draw3 = "ND";
+                }
+
+                const weekNumber = getWeekNumber(new Date());
+                const records = JSON.parse(localStorage.getItem('records')) || [];
+                const platformExistsThisWeek = records.some(record => 
+                    parseInt(record.week) === weekNumber && record.platform === platform
+                );
+
+                if (platformExistsThisWeek) {
+                    alert(`本周 (${weekNumber}) 已存在 ${platform} 的記錄！`);
+                    return;
+                }
+
+                const consumption = calculateConsumption(draw1, draw2, draw3);
+                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
+                const newRow = table.insertRow();
+                
+                // 檢查是否所有券都是 "-" 或 "ND"
+                const allEmptyOrND = [draw1, draw2, draw3].every(val => val === "-" || val === "ND");
+                
+                newRow.innerHTML = `
+                    <td>${weekNumber}</td>
+                    <td>${platform}</td>
+                    <td>${draw1}</td>
+                    <td>${draw2}</td>
+                    <td>${draw3}</td>
+                    <td>${formatNumber(consumption)}</td>
+                    <td><input type="checkbox" ${allEmptyOrND ? 'checked' : ''} onchange="toggleUsed(this)"></td>
+                    <td><button onclick="deleteRecord(this)">刪除</button></td>
+                `;
+                
+                if (allEmptyOrND) {
+                    newRow.classList.add('used');
+                }
+                
+                document.getElementById("recordForm").reset();
+                document.getElementById("draw1").value = "-";
+                document.getElementById("draw2").value = "-";
+                document.getElementById("draw3").value = "-";
+                saveRecords();
+            };
+
+            window.filterRecords = function() {
+                const week = document.getElementById("filterWeek").value;
+                const platform = document.getElementById("filterPlatform").value;
+                const rows = document.querySelectorAll("#recordsTable tbody tr");
+
+                rows.forEach(row => {
+                    const weekCell = row.cells[0].innerText;
+                    const platformCell = row.cells[1].innerText;
+                    const matchWeek = !week || weekCell === week;
+                    const matchPlatform = !platform || platformCell === platform;
+                    row.style.display = matchWeek && matchPlatform ? "" : "none";
+                });
+            };
+
+window.exportCSV = function() {
+    const table = document.getElementById("recordsTable");
+    const rows = table.querySelectorAll("tr");
+    let csvContent = "";
+    
+    // 添加BOM頭
+    const BOM = "\uFEFF";
+    csvContent += BOM;
+
+    rows.forEach(row => {
+        const rowData = [];
+        const cells = row.querySelectorAll("th, td");
+        cells.forEach((cell, index) => {
+            if (index === 6) {
+                const checkbox = cell.querySelector('input[type="checkbox"]');
+                rowData.push(checkbox && checkbox.checked ? '已使用' : '未使用');
+            } else if (index !== 7) {
+                rowData.push(cell.innerText.replace(/,/g, ''));
+            }
+        });
+        csvContent += rowData.join(",") + "\r\n";
+    });
+
+    // 生成時間戳記 yyyymmddhhmmss
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
+
+    // 使用Blob處理BIG5編碼
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=big5;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `macaudraw-${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+};
+
+            window.importCSV = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+                    const lines = contents.split('\n');
+                    const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
+                    table.innerHTML = '';
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        if (lines[i].trim() === '') continue;
+                        
+                        const cells = lines[i].split(',');
+                        if (cells.length >= 7) {
+                            const newRow = table.insertRow();
+                            newRow.innerHTML = `
+                                <td>${cells[0]}</td>
+                                <td>${cells[1]}</td>
+                                <td>${cells[2]}</td>
+                                <td>${cells[3]}</td>
+                                <td>${cells[4]}</td>
+                                <td>${formatNumber(cells[5])}</td>
+                                <td><input type="checkbox" ${cells[6].includes('已使用') ? 'checked' : ''} onchange="toggleUsed(this)"></td>
+                                <td><button onclick="deleteRecord(this)">刪除</button></td>
+                            `;
+                            if (cells[6].includes('已使用')) {
+                                newRow.classList.add('used');
+                            }
+                        }
+                    }
+                    saveRecords();
+                    event.target.value = '';
+                };
+                reader.readAsText(file, 'big5');
+            };
+
+            loadRecords();
+        });
+    </script>
+</body>
+</html>

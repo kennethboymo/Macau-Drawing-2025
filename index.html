@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>消費大獎賞2025</title>
+    <title>澳門消費大獎賞2025</title>
     <style>
         :root {
             --primary-color: #28a745;
@@ -126,7 +126,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 500px;
+            min-width: 400px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -136,7 +136,27 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 70px;
+            max-width: 50px;
+        }
+        th:nth-child(1), td:nth-child(1) {
+            max-width: 30px;
+        }
+        th:nth-child(2), td:nth-child(2) {
+            max-width: 60px;
+        }
+        th:nth-child(3), td:nth-child(3),
+        th:nth-child(4), td:nth-child(4),
+        th:nth-child(5), td:nth-child(5) {
+            max-width: 40px;
+        }
+        th:nth-child(6), td:nth-child(6) {
+            max-width: 60px;
+        }
+        th:nth-child(7), td:nth-child(7) {
+            max-width: 40px;
+        }
+        th:nth-child(8), td:nth-child(8) {
+            max-width: 50px;
         }
         th {
             background-color: var(--primary-color);
@@ -204,6 +224,19 @@
             margin-bottom: 15px;
             text-align: center;
             font-weight: bold;
+        }
+        .footer-note {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            border: 1px solid #eee;
+        }
+        .footer-note p {
+            margin: 0;
         }
         @media (max-width: 480px) {
             .filters {
@@ -338,6 +371,10 @@
         <button class="export-button" onclick="exportCSV()">匯出 CSV</button>
         <button class="import-button" onclick="document.getElementById('fileInput').click()">匯入 CSV</button>
         <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+        
+        <div class="footer-note">
+            <p>注意：本網頁並不會記錄任何資料，所有數據儲存於瀏覽器緩存中，在清理緩存時資料將被清除，建議定期匯出記錄進行備份。</p>
+        </div>
     </div>
 
     <script>
@@ -554,52 +591,52 @@
                 });
             };
 
-window.exportCSV = function() {
-    const table = document.getElementById("recordsTable");
-    const rows = table.querySelectorAll("tr");
-    let csvContent = "";
-    
-    // 添加BOM頭
-    const BOM = "\uFEFF";
-    csvContent += BOM;
+            window.exportCSV = function() {
+                const table = document.getElementById("recordsTable");
+                const rows = table.querySelectorAll("tr");
+                let csvContent = "";
+                
+                // 添加BOM頭
+                const BOM = "\uFEFF";
+                csvContent += BOM;
 
-    rows.forEach(row => {
-        const rowData = [];
-        const cells = row.querySelectorAll("th, td");
-        cells.forEach((cell, index) => {
-            if (index === 6) {
-                const checkbox = cell.querySelector('input[type="checkbox"]');
-                rowData.push(checkbox && checkbox.checked ? '已使用' : '未使用');
-            } else if (index !== 7) {
-                rowData.push(cell.innerText.replace(/,/g, ''));
-            }
-        });
-        csvContent += rowData.join(",") + "\r\n";
-    });
+                rows.forEach(row => {
+                    const rowData = [];
+                    const cells = row.querySelectorAll("th, td");
+                    cells.forEach((cell, index) => {
+                        if (index === 6) {
+                            const checkbox = cell.querySelector('input[type="checkbox"]');
+                            rowData.push(checkbox && checkbox.checked ? '已使用' : '未使用');
+                        } else if (index !== 7) {
+                            rowData.push(cell.innerText.replace(/,/g, ''));
+                        }
+                    });
+                    csvContent += rowData.join(",") + "\r\n";
+                });
 
-    // 生成時間戳記 yyyymmddhhmmss
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
+                // 生成時間戳記 yyyymmddhhmmss
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
 
-    // 使用Blob處理BIG5編碼
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=big5;' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `macaudraw-${timestamp}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-};
+                // 使用Blob處理BIG5編碼
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=big5;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `macaudraw-${timestamp}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            };
 
             window.importCSV = function(event) {
                 const file = event.target.files[0];

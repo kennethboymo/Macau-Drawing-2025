@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>澳門消費大獎賞2025</title>
+    <title>消費大獎賞2025</title>
     <style>
         :root {
             --primary-color: #28a745;
@@ -238,6 +238,20 @@
         .footer-note p {
             margin: 0;
         }
+        .privacy-notice {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+        }
+        .privacy-notice label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
         @media (max-width: 480px) {
             .filters {
                 flex-direction: column;
@@ -373,311 +387,346 @@
         <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
         
         <div class="footer-note">
-            <p>注意：本網頁並不會記錄任何資料，所有數據儲存於瀏覽器緩存中，在清理緩存時資料將被清除，建議定期匯出記錄進行備份。</p>
+            <p>注意：所有資料儲存在Firebase數據庫中，跨設備自動同步</p>
+        </div>
+        
+        <div class="privacy-notice">
+            <h4>隱私聲明</h4>
+            <p>我們使用匿名帳號保存您的數據，不會收集個人識別信息</p>
+            <label>
+                <input type="checkbox" id="analyticsOptOut">
+                不參與使用數據分析
+            </label>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            function getWeekNumber(date) {
-                const startOfFirstWeek = new Date(2025, 2, 24); // 2025年3月24日為第一周開始
-                const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
-                return Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
+        // 請替換為您的Firebase配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRjL_wJqYvufMvtDiwEuN_vYso4cTKaKA",
+            authDomain: "macau-draw.firebaseapp.com",
+  	    databaseURL: "https://macau-draw-default-rtdb.asia-southeast1.firebasedatabase.app",
+ 	    projectId: "macau-draw",
+  	    storageBucket: "macau-draw.firebasestorage.app",
+  	    messagingSenderId: "953987756535",
+ 	    appId: "1:953987756535:web:a7a09862a1ca5aaefbfef2"
+        };
+
+        // 初始化Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // 匿名登入狀態監聽
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("匿名用戶已登入:", user.uid);
+                loadUserRecords(user.uid);
+            } else {
+                auth.signInAnonymously().catch((error) => {
+                    console.error("匿名登入失敗:", error);
+                });
+            }
+        });
+
+        // 保存記錄到Firebase
+        async function saveRecordToFirebase(record) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            // 數據驗證
+            if (!validateRecord(record)) {
+                alert("無效的記錄數據！");
+                return;
             }
 
-            function formatNumber(num) {
-                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            const userId = user.uid;
+            const recordId = Date.now();
+            
+            try {
+                await db.ref(`users/${userId}/records/${recordId}`).set({
+                    ...record,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                console.log("記錄已保存");
+            } catch (error) {
+                console.error("保存失敗:", error);
+                alert("保存失敗，請檢查網絡連接");
             }
+        }
 
-            function updateTimeInfo() {
-                const now = new Date();
-                const weekNumber = getWeekNumber(now);
-                const options = { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit', 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: false
-                };
-                const timeString = now.toLocaleString('zh-HK', options);
-                document.getElementById('timeInfo').innerHTML = 
-                    `現在時間是：${timeString}<br>本周是活動第${weekNumber}周`;
-                return weekNumber;
-            }
+        // 數據驗證函數
+        function validateRecord(record) {
+            const validPlatforms = ['Alipay', 'BOC', 'GFB', 'ICBC', 'Luso', 'MPay', 'TFB', 'UePay'];
+            const validCoupons = ['10', '20', '50', '100', '200', '-', 'ND'];
+            
+            return (
+                validPlatforms.includes(record.platform) &&
+                validCoupons.includes(record.draw1) &&
+                validCoupons.includes(record.draw2) &&
+                validCoupons.includes(record.draw3) &&
+                typeof record.consumption === 'number'
+            );
+        }
 
-            function updateWeeklySummary() {
-                const currentWeek = getWeekNumber(new Date());
-                const records = JSON.parse(localStorage.getItem('records')) || [];
-                const weeklyRecords = records.filter(record => parseInt(record.week) === currentWeek);
+        // 從Firebase加載記錄
+        function loadUserRecords(userId) {
+            const recordsRef = db.ref(`users/${userId}/records`);
+            
+            recordsRef.on('value', (snapshot) => {
+                const records = snapshot.val() || {};
+                renderRecords(records);
+                updateWeeklySummary(records);
+            });
+        }
+
+        // 渲染記錄到表格
+        function renderRecords(records) {
+            const tableBody = document.getElementById('recordsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            Object.entries(records).forEach(([id, record]) => {
+                const row = tableBody.insertRow();
+                if (record.used) row.classList.add('used');
                 
-                let totalCoupons = 0;
-                let totalConsumption = 0;
-                
-                weeklyRecords.forEach(record => {
+                row.innerHTML = `
+                    <td>${record.week}</td>
+                    <td>${record.platform}</td>
+                    <td>${record.draw1}</td>
+                    <td>${record.draw2}</td>
+                    <td>${record.draw3}</td>
+                    <td>${formatNumber(record.consumption)}</td>
+                    <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed('${id}', this)"></td>
+                    <td><button onclick="deleteRecord('${id}')">刪除</button></td>
+                `;
+            });
+        }
+
+        // 刪除記錄
+        window.deleteRecord = async (recordId) => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            if (confirm('確定要刪除此記錄嗎？')) {
+                try {
+                    await db.ref(`users/${user.uid}/records/${recordId}`).remove();
+                } catch (error) {
+                    console.error("刪除失敗:", error);
+                }
+            }
+        };
+
+        // 切換使用狀態
+        window.toggleUsed = async (recordId, checkbox) => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                await db.ref(`users/${user.uid}/records/${recordId}/used`).set(checkbox.checked);
+            } catch (error) {
+                console.error("更新狀態失敗:", error);
+            }
+        };
+
+        // 添加記錄
+        window.addRecord = function() {
+            const platform = document.getElementById("platform").value;
+            let draw1 = document.getElementById("draw1").value;
+            let draw2 = document.getElementById("draw2").value;
+            let draw3 = document.getElementById("draw3").value;
+            const giveUp = document.getElementById("giveUp").checked;
+
+            if (!platform) {
+                alert("請選擇平台！");
+                return;
+            }
+            if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
+                alert("請選擇券1, 券2, 券3！");
+                return;
+            }
+            if (giveUp) {
+                draw1 = draw2 = draw3 = "ND";
+            }
+
+            const weekNumber = getWeekNumber(new Date());
+            const record = {
+                week: weekNumber,
+                platform,
+                draw1,
+                draw2,
+                draw3,
+                consumption: calculateConsumption(draw1, draw2, draw3),
+                used: giveUp
+            };
+
+            saveRecordToFirebase(record);
+            document.getElementById("recordForm").reset();
+            document.getElementById("draw1").value = "-";
+            document.getElementById("draw2").value = "-";
+            document.getElementById("draw3").value = "-";
+        };
+
+        // 計算消費金額
+        function calculateConsumption(draw1, draw2, draw3) {
+            const values = [draw1, draw2, draw3].map(val => {
+                if (val === '-' || val === 'ND') return 0;
+                return parseInt(val) || 0;
+            });
+            const sum = values.reduce((a, b) => a + b, 0);
+            return sum * 3; // 消費金額 = (券1+券2+券3)*3
+        }
+
+        // 更新周摘要
+        function updateWeeklySummary(records) {
+            const currentWeek = getWeekNumber(new Date());
+            let totalCoupons = 0;
+            let totalConsumption = 0;
+
+            Object.values(records).forEach(record => {
+                if (parseInt(record.week) === currentWeek) {
                     if (record.draw1 !== "ND") totalCoupons += parseInt(record.draw1) || 0;
                     if (record.draw2 !== "ND") totalCoupons += parseInt(record.draw2) || 0;
                     if (record.draw3 !== "ND") totalCoupons += parseInt(record.draw3) || 0;
                     totalConsumption += parseInt(record.consumption) || 0;
-                });
-                
-                document.getElementById('weeklySummary').innerText = 
-                    `本周消費券：MOP ${formatNumber(totalCoupons)}\n需消費：MOP ${formatNumber(totalConsumption)}`;
-
-                // 然後用CSS選擇器來改變顏色
-                const summaryElement = document.getElementById('weeklySummary');
-                summaryElement.style.color = 'green'; // 將整個元素的文字設為綠色
-            }
-
-            const currentWeek = updateTimeInfo();
-            setInterval(updateTimeInfo, 1000);
-
-            function calculateConsumption(draw1, draw2, draw3) {
-                const values = [draw1, draw2, draw3].map(val => parseInt(val) || 0);
-                const sum = values.reduce((a, b) => a + b, 0);
-                return isNaN(sum) ? 0 : sum * 3;
-            }
-
-            function saveRecords() {
-                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
-                const rows = table.rows;
-                const records = [];
-                for (let row of rows) {
-                    const week = row.cells[0].innerText;
-                    const platform = row.cells[1].innerText;
-                    const draw1 = row.cells[2].innerText;
-                    const draw2 = row.cells[3].innerText;
-                    const draw3 = row.cells[4].innerText;
-                    const consumption = row.cells[5].innerText.replace(/,/g, '');
-                    const used = row.cells[6].querySelector('input').checked;
-                    records.push({ week, platform, draw1, draw2, draw3, consumption, used });
                 }
-                localStorage.setItem('records', JSON.stringify(records));
-                updatePlatformOptions();
-                updateWeeklySummary();
-            }
+            });
 
-            function loadRecords() {
-                const records = JSON.parse(localStorage.getItem('records')) || [];
-                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
-                table.innerHTML = '';
-                records.forEach(record => {
-                    const newRow = table.insertRow();
-                    const consumption = calculateConsumption(record.draw1, record.draw2, record.draw3);
-                    newRow.innerHTML = `
-                        <td>${record.week}</td>
-                        <td>${record.platform}</td>
-                        <td>${record.draw1}</td>
-                        <td>${record.draw2}</td>
-                        <td>${record.draw3}</td>
-                        <td>${formatNumber(consumption)}</td>
-                        <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed(this)"></td>
-                        <td><button onclick="deleteRecord(this)">刪除</button></td>
-                    `;
-                    if (record.used) {
-                        newRow.classList.add('used');
+            document.getElementById('weeklySummary').innerText = 
+                `本周消費券：MOP ${formatNumber(totalCoupons)}\n需消費：MOP ${formatNumber(totalConsumption)}`;
+            document.getElementById('weeklySummary').style.color = 'green';
+        }
+
+        // 格式化數字
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // 獲取當前周數
+        function getWeekNumber(date) {
+            const startOfFirstWeek = new Date(2025, 2, 24); // 2025年3月24日為第一周開始
+            const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+            return Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
+        }
+
+        // 篩選記錄
+        window.filterRecords = function() {
+            const week = document.getElementById("filterWeek").value;
+            const platform = document.getElementById("filterPlatform").value;
+            const rows = document.querySelectorAll("#recordsTable tbody tr");
+
+            rows.forEach(row => {
+                const weekCell = row.cells[0].innerText;
+                const platformCell = row.cells[1].innerText;
+                const matchWeek = !week || weekCell === week;
+                const matchPlatform = !platform || platformCell === platform;
+                row.style.display = matchWeek && matchPlatform ? "" : "none";
+            });
+        };
+
+        // 導出CSV
+        window.exportCSV = function() {
+            const table = document.getElementById("recordsTable");
+            const rows = table.querySelectorAll("tr");
+            let csvContent = "\uFEFF"; // BOM頭
+            
+            rows.forEach(row => {
+                const rowData = [];
+                const cells = row.querySelectorAll("th, td");
+                cells.forEach((cell, index) => {
+                    if (index === 6) {
+                        const checkbox = cell.querySelector('input[type="checkbox"]');
+                        rowData.push(checkbox?.checked ? '已使用' : '未使用');
+                    } else if (index !== 7) {
+                        rowData.push(cell.innerText.replace(/,/g, ''));
                     }
                 });
-                updatePlatformOptions();
-                updateWeeklySummary();
+                csvContent += rowData.join(",") + "\r\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `macaudraw-${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // 導入CSV
+        window.importCSV = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const contents = e.target.result;
+                const lines = contents.split('\n');
+                const user = auth.currentUser;
+                if (!user) return;
+
+                let importedCount = 0;
                 
-                // Set the filter to current week by default
-                document.getElementById('filterWeek').value = currentWeek;
-                filterRecords();
-            }
-
-            window.deleteRecord = function(button) {
-                if (confirm('確定要刪除此記錄嗎？')) {
-                    button.parentElement.parentElement.remove();
-                    saveRecords();
-                }
-            };
-
-            window.toggleUsed = function(checkbox) {
-                const row = checkbox.closest('tr');
-                if (checkbox.checked) {
-                    row.classList.add('used');
-                } else {
-                    row.classList.remove('used');
-                }
-                saveRecords();
-            };
-
-            function updatePlatformOptions() {
-                const platformSelect = document.getElementById("platform");
-                const currentWeek = getWeekNumber(new Date());
-                const records = JSON.parse(localStorage.getItem('records')) || [];
-                const usedPlatformsThisWeek = records
-                    .filter(record => parseInt(record.week) === currentWeek)
-                    .map(record => record.platform);
-
-                Array.from(platformSelect.options).forEach(option => {
-                    if (option.value && option.value !== "") {
-                        option.disabled = usedPlatformsThisWeek.includes(option.value);
-                    }
-                });
-            }
-
-            window.addRecord = function() {
-                const platform = document.getElementById("platform").value;
-                let draw1 = document.getElementById("draw1").value;
-                let draw2 = document.getElementById("draw2").value;
-                let draw3 = document.getElementById("draw3").value;
-                const giveUp = document.getElementById("giveUp").checked;
-
-                if (!platform) {
-                    alert("請選擇平台！");
-                    return;
-                }
-                if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
-                    alert("請選擇券1, 券2, 券3！");
-                    return;
-                }
-                if (giveUp) {
-                    draw1 = draw2 = draw3 = "ND";
-                }
-
-                const weekNumber = getWeekNumber(new Date());
-                const records = JSON.parse(localStorage.getItem('records')) || [];
-                const platformExistsThisWeek = records.some(record => 
-                    parseInt(record.week) === weekNumber && record.platform === platform
-                );
-
-                if (platformExistsThisWeek) {
-                    alert(`本周 (${weekNumber}) 已存在 ${platform} 的記錄！`);
-                    return;
-                }
-
-                const consumption = calculateConsumption(draw1, draw2, draw3);
-                const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
-                const newRow = table.insertRow();
-                
-                // 檢查是否所有券都是 "-" 或 "ND"
-                const allEmptyOrND = [draw1, draw2, draw3].every(val => val === "-" || val === "ND");
-                
-                newRow.innerHTML = `
-                    <td>${weekNumber}</td>
-                    <td>${platform}</td>
-                    <td>${draw1}</td>
-                    <td>${draw2}</td>
-                    <td>${draw3}</td>
-                    <td>${formatNumber(consumption)}</td>
-                    <td><input type="checkbox" ${allEmptyOrND ? 'checked' : ''} onchange="toggleUsed(this)"></td>
-                    <td><button onclick="deleteRecord(this)">刪除</button></td>
-                `;
-                
-                if (allEmptyOrND) {
-                    newRow.classList.add('used');
-                }
-                
-                document.getElementById("recordForm").reset();
-                document.getElementById("draw1").value = "-";
-                document.getElementById("draw2").value = "-";
-                document.getElementById("draw3").value = "-";
-                saveRecords();
-            };
-
-            window.filterRecords = function() {
-                const week = document.getElementById("filterWeek").value;
-                const platform = document.getElementById("filterPlatform").value;
-                const rows = document.querySelectorAll("#recordsTable tbody tr");
-
-                rows.forEach(row => {
-                    const weekCell = row.cells[0].innerText;
-                    const platformCell = row.cells[1].innerText;
-                    const matchWeek = !week || weekCell === week;
-                    const matchPlatform = !platform || platformCell === platform;
-                    row.style.display = matchWeek && matchPlatform ? "" : "none";
-                });
-            };
-
-            window.exportCSV = function() {
-                const table = document.getElementById("recordsTable");
-                const rows = table.querySelectorAll("tr");
-                let csvContent = "";
-                
-                // 添加BOM頭
-                const BOM = "\uFEFF";
-                csvContent += BOM;
-
-                rows.forEach(row => {
-                    const rowData = [];
-                    const cells = row.querySelectorAll("th, td");
-                    cells.forEach((cell, index) => {
-                        if (index === 6) {
-                            const checkbox = cell.querySelector('input[type="checkbox"]');
-                            rowData.push(checkbox && checkbox.checked ? '已使用' : '未使用');
-                        } else if (index !== 7) {
-                            rowData.push(cell.innerText.replace(/,/g, ''));
-                        }
-                    });
-                    csvContent += rowData.join(",") + "\r\n";
-                });
-
-                // 生成時間戳記 yyyymmddhhmmss
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-
-                // 使用Blob處理BIG5編碼
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=big5;' });
-                const url = URL.createObjectURL(blob);
-                
-                const link = document.createElement("a");
-                link.setAttribute("href", url);
-                link.setAttribute("download", `macaudraw-${timestamp}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-            };
-
-            window.importCSV = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const contents = e.target.result;
-                    const lines = contents.split('\n');
-                    const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
-                    table.innerHTML = '';
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
                     
-                    for (let i = 1; i < lines.length; i++) {
-                        if (lines[i].trim() === '') continue;
-                        
-                        const cells = lines[i].split(',');
-                        if (cells.length >= 7) {
-                            const newRow = table.insertRow();
-                            newRow.innerHTML = `
-                                <td>${cells[0]}</td>
-                                <td>${cells[1]}</td>
-                                <td>${cells[2]}</td>
-                                <td>${cells[3]}</td>
-                                <td>${cells[4]}</td>
-                                <td>${formatNumber(cells[5])}</td>
-                                <td><input type="checkbox" ${cells[6].includes('已使用') ? 'checked' : ''} onchange="toggleUsed(this)"></td>
-                                <td><button onclick="deleteRecord(this)">刪除</button></td>
-                            `;
-                            if (cells[6].includes('已使用')) {
-                                newRow.classList.add('used');
-                            }
+                    const cells = lines[i].split(',');
+                    if (cells.length >= 7) {
+                        const record = {
+                            week: cells[0],
+                            platform: cells[1],
+                            draw1: cells[2],
+                            draw2: cells[3],
+                            draw3: cells[4],
+                            consumption: parseInt(cells[5].replace(/,/g, '')) || 0,
+                            used: cells[6].includes('已使用')
+                        };
+
+                        if (validateRecord(record)) {
+                            await db.ref(`users/${user.uid}/records/${Date.now() + i}`).set(record);
+                            importedCount++;
                         }
                     }
-                    saveRecords();
-                    event.target.value = '';
-                };
-                reader.readAsText(file, 'big5');
+                }
+                
+                alert(`成功導入 ${importedCount} 條記錄`);
+                event.target.value = '';
             };
+            reader.readAsText(file);
+        };
 
-            loadRecords();
+        // 初始化時間顯示
+        function updateTimeInfo() {
+            const now = new Date();
+            const weekNumber = getWeekNumber(now);
+            const options = { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+            };
+            const timeString = now.toLocaleString('zh-HK', options);
+            document.getElementById('timeInfo').innerHTML = 
+                `現在時間是：${timeString}<br>本周是活動第${weekNumber}周`;
+            return weekNumber;
+        }
+
+        // 初始化頁面
+        updateTimeInfo();
+        setInterval(updateTimeInfo, 60000); // 每分鐘更新時間
+
+        // 隱私設置
+        document.getElementById('analyticsOptOut').addEventListener('change', function(e) {
+            localStorage.setItem('analyticsOptOut', e.target.checked);
         });
+        document.getElementById('analyticsOptOut').checked = localStorage.getItem('analyticsOptOut') === 'true';
     </script>
 </body>
 </html>

@@ -387,7 +387,7 @@
         <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
         
         <div class="footer-note">
-            <p>注意：所有資料儲存在Firebase數據庫中，跨設備自動同步</p>
+            <p>注意：所有資料以匿名方式儲存在Firebase數據庫中。</p>
         </div>
         
         <div class="privacy-notice">
@@ -482,6 +482,15 @@
                 const records = snapshot.val() || {};
                 renderRecords(records);
                 updateWeeklySummary(records);
+
+                // 自動篩選當周資料
+                const currentWeek = getWeekNumber(new Date());
+                document.getElementById("filterWeek").value = currentWeek;
+                filterRecords();
+  
+                // 更新平台選擇狀態
+                updatePlatformOptions(records, currentWeek);
+
             });
         }
 
@@ -627,6 +636,111 @@
                 row.style.display = matchWeek && matchPlatform ? "" : "none";
             });
         };
+
+
+        // 新增函數：更新平台選擇狀態
+        function updatePlatformOptions(records, currentWeek) {
+            const platformSelect = document.getElementById("platform");
+            const usedPlatforms = new Set();
+        
+            // 收集已使用的平台
+            Object.values(records).forEach(record => {
+                if (parseInt(record.week) === currentWeek) {
+                    usedPlatforms.add(record.platform);
+                }
+            });
+            
+            // 更新選擇框狀態
+            Array.from(platformSelect.options).forEach(option => {
+                if (option.value && usedPlatforms.has(option.value)) {
+                    option.disabled = true;
+                    option.style.color = '#aaa';
+                } else {
+                    option.disabled = false;
+                    option.style.color = '';
+                }
+            });
+        }
+
+        // 修改 addRecord 函數，增加重複檢查
+        window.addRecord = function() {
+            const platform = document.getElementById("platform").value;
+            let draw1 = document.getElementById("draw1").value;
+            let draw2 = document.getElementById("draw2").value;
+            let draw3 = document.getElementById("draw3").value;
+            const giveUp = document.getElementById("giveUp").checked;
+
+            if (!platform) {
+                alert("請選擇平台！");
+                return;
+            }
+        
+            // 檢查平台是否已被禁用（表示已存在記錄）
+            const platformSelect = document.getElementById("platform");
+            const selectedOption = platformSelect.options[platformSelect.selectedIndex];
+            if (selectedOption.disabled) {
+                alert("本周此平台已存在記錄，請選擇其他平台！");
+                return;
+            }
+
+            if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
+                alert("請選擇券1, 券2, 券3！");
+                return;
+            }
+            if (giveUp) {
+                draw1 = draw2 = draw3 = "ND";
+            }
+
+            const weekNumber = getWeekNumber(new Date());
+            const record = {
+                week: weekNumber,
+                platform,
+                draw1,
+                draw2,
+                draw3,
+                consumption: calculateConsumption(draw1, draw2, draw3),
+                used: giveUp
+            };
+
+            saveRecordToFirebase(record);
+            document.getElementById("recordForm").reset();
+            document.getElementById("draw1").value = "-";
+            document.getElementById("draw2").value = "-";
+            document.getElementById("draw3").value = "-";
+        };
+
+        // 在 filterRecords 函數中增加重置平台選擇狀態
+        window.filterRecords = function() {
+            const week = document.getElementById("filterWeek").value;
+            const platform = document.getElementById("filterPlatform").value;
+            const rows = document.querySelectorAll("#recordsTable tbody tr");
+
+            rows.forEach(row => {
+                const weekCell = row.cells[0].innerText;
+                const platformCell = row.cells[1].innerText;
+                const matchWeek = !week || weekCell === week;
+                const matchPlatform = !platform || platformCell === platform;
+                row.style.display = matchWeek && matchPlatform ? "" : "none";
+            });
+        
+            // 如果篩選的是當前周，更新平台選擇狀態
+            const currentWeek = getWeekNumber(new Date());
+            if (week === currentWeek.toString()) {
+                const recordsRef = db.ref(`users/${auth.currentUser.uid}/records`);
+                recordsRef.once('value').then(snapshot => {
+                    const records = snapshot.val() || {};
+                    updatePlatformOptions(records, currentWeek);
+                });
+            } else {
+                // 重置平台選擇狀態
+                const platformSelect = document.getElementById("platform");
+                Array.from(platformSelect.options).forEach(option => {
+                    option.disabled = false;
+                    option.style.color = '';
+                });
+            }
+        };
+
 
         // 導出CSV
         window.exportCSV = function() {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>澳門消費大獎賞2025</title>
+    <title>消費大獎賞2025</title>
     <style>
         :root {
             --primary-color: #28a745;
@@ -238,6 +238,20 @@
         .footer-note p {
             margin: 0;
         }
+        .privacy-notice {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+        }
+        .privacy-notice label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
         @media (max-width: 480px) {
             .filters {
                 flex-direction: column;
@@ -373,14 +387,90 @@
         <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
         
         <div class="footer-note">
-            <p>注意：本網頁並不會記錄任何資料，所有數據儲存於瀏覽器緩存中，在清理緩存時資料將被清除，建議定期匯出記錄進行備份。</p>
+            <p>注意：所有資料儲存在瀏覽器緩存中，在清理緩存時資料會被清除，建議定期匯出記錄備份。</p>
+        </div>
+        
+        <div class="privacy-notice">
+            <h4>隱私聲明</h4>
+            <p>數據收集僅供統計用途，這些數據不會包含個人識別信息。</p>
+            <label>
+                <input type="checkbox" id="analyticsOptOut">
+                不參與匿名數據收集
+            </label>
         </div>
     </div>
 
     <script>
+        // 數據收集配置
+        const ANALYTICS_ENABLED = true;
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxARs9oaFesc_jb6poaLd3U2UjcAv8gRFZe4GcWpz_ChChWnrb-fdGBJ8HG3XpcxITi2Q/exec'; // 替換為您的實際URL
+
+        // 匿名數據收集功能
+        function getAnonymousId() {
+            let id = localStorage.getItem('anonymousId');
+            if (!id) {
+                id = 'user_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('anonymousId', id);
+            }
+            return id;
+        }
+
+        function isOptedOut() {
+            return localStorage.getItem('analyticsOptOut') === 'true';
+        }
+
+        async function sendAnalyticsEvent(eventType, eventData = {}) {
+            if (!ANALYTICS_ENABLED || isOptedOut()) return;
+            
+            try {
+                const payload = {
+                    anonymousId: getAnonymousId(),
+                    eventType,
+                    platform: 'web',
+                    page: window.location.pathname,
+                    ...eventData
+                };
+                
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    console.error('數據發送失敗:', await response.text());
+                }
+            } catch (error) {
+                console.error('數據發送錯誤:', error);
+            }
+        }
+
+        function initPrivacySettings() {
+            const optOutCheckbox = document.getElementById('analyticsOptOut');
+            if (optOutCheckbox) {
+                optOutCheckbox.checked = isOptedOut();
+                optOutCheckbox.addEventListener('change', function(e) {
+                    localStorage.setItem('analyticsOptOut', e.target.checked);
+                    sendAnalyticsEvent('privacy_setting_change', {
+                        optOut: e.target.checked
+                    });
+                });
+            }
+        }
+
+        // 原有功能代碼
         document.addEventListener('DOMContentLoaded', function() {
+            initPrivacySettings();
+            
+            // 追蹤頁面訪問
+            sendAnalyticsEvent('page_view', {
+                pageTitle: document.title
+            });
+
             function getWeekNumber(date) {
-                const startOfFirstWeek = new Date(2025, 2, 24); // 2025年3月24日為第一周開始
+                const startOfFirstWeek = new Date(2025, 2, 24);
                 const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
                 return Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
             }
@@ -423,10 +513,7 @@
                 
                 document.getElementById('weeklySummary').innerText = 
                     `本周消費券：MOP ${formatNumber(totalCoupons)}\n需消費：MOP ${formatNumber(totalConsumption)}`;
-
-                // 然後用CSS選擇器來改變顏色
-                const summaryElement = document.getElementById('weeklySummary');
-                summaryElement.style.color = 'green'; // 將整個元素的文字設為綠色
+                document.getElementById('weeklySummary').style.color = 'green';
             }
 
             const currentWeek = updateTimeInfo();
@@ -480,16 +567,22 @@
                 });
                 updatePlatformOptions();
                 updateWeeklySummary();
-                
-                // Set the filter to current week by default
                 document.getElementById('filterWeek').value = currentWeek;
                 filterRecords();
             }
 
             window.deleteRecord = function(button) {
                 if (confirm('確定要刪除此記錄嗎？')) {
-                    button.parentElement.parentElement.remove();
+                    const row = button.parentElement.parentElement;
+                    const platform = row.cells[1].innerText;
+                    const week = row.cells[0].innerText;
+                    
+                    row.remove();
                     saveRecords();
+                    sendAnalyticsEvent('record_deleted', {
+                        platform,
+                        week
+                    });
                 }
             };
 
@@ -552,7 +645,6 @@
                 const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
                 const newRow = table.insertRow();
                 
-                // 檢查是否所有券都是 "-" 或 "ND"
                 const allEmptyOrND = [draw1, draw2, draw3].every(val => val === "-" || val === "ND");
                 
                 newRow.innerHTML = `
@@ -575,6 +667,15 @@
                 document.getElementById("draw2").value = "-";
                 document.getElementById("draw3").value = "-";
                 saveRecords();
+                
+                // 追蹤記錄添加事件
+                sendAnalyticsEvent('record_added', {
+                    platform,
+                    draw1,
+                    draw2,
+                    draw3,
+                    week: weekNumber
+                });
             };
 
             window.filterRecords = function() {
@@ -596,7 +697,6 @@
                 const rows = table.querySelectorAll("tr");
                 let csvContent = "";
                 
-                // 添加BOM頭
                 const BOM = "\uFEFF";
                 csvContent += BOM;
 
@@ -614,7 +714,6 @@
                     csvContent += rowData.join(",") + "\r\n";
                 });
 
-                // 生成時間戳記 yyyymmddhhmmss
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -624,7 +723,6 @@
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
 
-                // 使用Blob處理BIG5編碼
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=big5;' });
                 const url = URL.createObjectURL(blob);
                 
@@ -636,6 +734,9 @@
                 document.body.removeChild(link);
                 
                 setTimeout(() => URL.revokeObjectURL(url), 100);
+                
+                // 追蹤匯出事件
+                sendAnalyticsEvent('data_exported');
             };
 
             window.importCSV = function(event) {
@@ -648,6 +749,8 @@
                     const lines = contents.split('\n');
                     const table = document.getElementById("recordsTable").getElementsByTagName("tbody")[0];
                     table.innerHTML = '';
+                    
+                    let recordCount = 0;
                     
                     for (let i = 1; i < lines.length; i++) {
                         if (lines[i].trim() === '') continue;
@@ -668,10 +771,16 @@
                             if (cells[6].includes('已使用')) {
                                 newRow.classList.add('used');
                             }
+                            recordCount++;
                         }
                     }
                     saveRecords();
                     event.target.value = '';
+                    
+                    // 追蹤匯入事件
+                    sendAnalyticsEvent('data_imported', {
+                        recordCount
+                    });
                 };
                 reader.readAsText(file, 'big5');
             };

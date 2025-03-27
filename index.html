@@ -67,6 +67,16 @@
             box-sizing: border-box;
             font-size: 0.9rem;
         }
+        /* 在現有樣式中添加以下內容 */
+        tbody td:nth-child(3),
+        tbody td:nth-child(4),
+        tbody td:nth-child(5) {
+            cursor: pointer;
+        }
+        tbody td.strikethrough {
+            text-decoration: line-through;
+            color: #888;
+        }
         #recordForm select {
             flex-grow: 1;
         }
@@ -387,7 +397,7 @@
         <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
         
         <div class="footer-note">
-            <p>注意：所有資料以匿名方式儲存在Firebase數據庫中。/n本網頁與活動官方無關，僅為個人開發使用，開發者對內容提供、儲存或滅失不負任何法律責任。</p>
+            <p>注意：所有資料以匿名方式儲存在Firebase數據庫中，用戶使用同一設備及瀏覽器可同步相關記錄。<br>本網頁與活動官方無關，僅為個人開發使用，網頁提供者對內容的提供、儲存或滅失不負任何責任。</p>
         </div>
         
         <div class="privacy-notice">
@@ -503,18 +513,56 @@
                 const row = tableBody.insertRow();
                 if (record.used) row.classList.add('used');
                 
+                // 檢查是否有需要添加刪除線的券
+                const draw1Strikethrough = record.draw1 === '-' || record.draw1 === 'ND' || record.strikethrough?.includes('draw1');
+                const draw2Strikethrough = record.draw2 === '-' || record.draw2 === 'ND' || record.strikethrough?.includes('draw2');
+                const draw3Strikethrough = record.draw3 === '-' || record.draw3 === 'ND' || record.strikethrough?.includes('draw3');
+                
                 row.innerHTML = `
                     <td>${record.week}</td>
                     <td>${record.platform}</td>
-                    <td>${record.draw1}</td>
-                    <td>${record.draw2}</td>
-                    <td>${record.draw3}</td>
+                    <td class="${draw1Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw1', this)">${record.draw1}</td>
+                    <td class="${draw2Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw2', this)">${record.draw2}</td>
+                    <td class="${draw3Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw3', this)">${record.draw3}</td>
                     <td>${formatNumber(record.consumption)}</td>
                     <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed('${id}', this)"></td>
                     <td><button onclick="deleteRecord('${id}')">刪除</button></td>
                 `;
             });
         }
+
+        // 切換刪除線
+        window.toggleStrikethrough = async function(recordId, field, element) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                const recordRef = db.ref(`users/${user.uid}/records/${recordId}`);
+                const snapshot = await recordRef.once('value');
+                const record = snapshot.val();
+                
+                // 初始化strikethrough數組（如果不存在）
+                const strikethrough = record.strikethrough || [];
+                
+                // 檢查當前欄位是否已有刪除線
+                const index = strikethrough.indexOf(field);
+                if (index === -1) {
+                    // 添加刪除線
+                    strikethrough.push(field);
+                    element.classList.add('strikethrough');
+                } else {
+                    // 移除刪除線
+                    strikethrough.splice(index, 1);
+                    element.classList.remove('strikethrough');
+                }
+                
+                // 更新Firebase中的記錄
+                await recordRef.update({ strikethrough });
+            } catch (error) {
+                console.error("更新刪除線失敗:", error);
+            }
+        };
+
 
         // 刪除記錄
         window.deleteRecord = async (recordId) => {

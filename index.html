@@ -67,7 +67,6 @@
             box-sizing: border-box;
             font-size: 0.9rem;
         }
-        /* 在現有樣式中添加以下內容 */
         tbody td:nth-child(3),
         tbody td:nth-child(4),
         tbody td:nth-child(5) {
@@ -262,6 +261,76 @@
             gap: 8px;
             margin-top: 8px;
         }
+        /* Settings Button */
+        .settings-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #6c757d;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        .settings-button:hover {
+            background-color: #5a6268;
+        }
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .platform-checkboxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .platform-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         @media (max-width: 480px) {
             .filters {
                 flex-direction: column;
@@ -277,6 +346,9 @@
             }
             .draw-row {
                 flex-wrap: wrap;
+            }
+            .platform-checkboxes {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -410,6 +482,39 @@
         </div>
     </div>
 
+    <!-- Settings Button -->
+    <div class="settings-button" onclick="openSettings()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">設置</div>
+                <button class="close-modal" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="platform-settings">
+                <h4>平台顯示設置</h4>
+                <p>選擇要隱藏的平台（將不會出現在選擇列表中）</p>
+                <div class="platform-checkboxes">
+                    <label><input type="checkbox" class="platform-toggle" value="Alipay"> Alipay支付寶</label>
+                    <label><input type="checkbox" class="platform-toggle" value="BOC"> BOC中銀</label>
+                    <label><input type="checkbox" class="platform-toggle" value="GFB"> GFB廣發</label>
+                    <label><input type="checkbox" class="platform-toggle" value="ICBC"> ICBC工銀</label>
+                    <label><input type="checkbox" class="platform-toggle" value="Luso"> Luso國際</label>
+                    <label><input type="checkbox" class="platform-toggle" value="MPay"> MPay</label>
+                    <label><input type="checkbox" class="platform-toggle" value="TFB"> TFB大豐</label>
+                    <label><input type="checkbox" class="platform-toggle" value="UePay"> UePay極易付</label>
+                </div>
+            </div>
+            <button class="export-button" onclick="closeSettings()">完成</button>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -420,11 +525,11 @@
         const firebaseConfig = {
             apiKey: "AIzaSyCRjL_wJqYvufMvtDiwEuN_vYso4cTKaKA",
             authDomain: "macau-draw.firebaseapp.com",
-  	    databaseURL: "https://macau-draw-default-rtdb.asia-southeast1.firebasedatabase.app",
- 	    projectId: "macau-draw",
-  	    storageBucket: "macau-draw.firebasestorage.app",
-  	    messagingSenderId: "953987756535",
- 	    appId: "1:953987756535:web:a7a09862a1ca5aaefbfef2"
+            databaseURL: "https://macau-draw-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "macau-draw",
+            storageBucket: "macau-draw.firebasestorage.app",
+            messagingSenderId: "953987756535",
+            appId: "1:953987756535:web:a7a09862a1ca5aaefbfef2"
         };
 
         // 初始化Firebase
@@ -464,6 +569,9 @@
                     createdAt: firebase.database.ServerValue.TIMESTAMP
                 });
                 console.log("記錄已保存");
+                
+                // Refresh the records after saving
+                loadUserRecords(userId);
             } catch (error) {
                 console.error("保存失敗:", error);
                 alert("保存失敗，請檢查網絡連接");
@@ -493,14 +601,15 @@
                 renderRecords(records);
                 updateWeeklySummary(records);
 
-                // 自動篩選當周資料
+                // Set current week filter and apply it
                 const currentWeek = getWeekNumber(new Date());
                 document.getElementById("filterWeek").value = currentWeek;
-                filterRecords();
-  
-                // 更新平台選擇狀態
-                updatePlatformOptions(records, currentWeek);
-
+                
+                // Apply filter after records are rendered
+                setTimeout(() => {
+                    filterRecords();
+                    updatePlatformOptions(records, currentWeek);
+                }, 100);
             });
         }
 
@@ -509,14 +618,20 @@
             const tableBody = document.getElementById('recordsTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = '';
 
+            if (Object.keys(records).length === 0) {
+                const emptyRow = tableBody.insertRow();
+                emptyRow.innerHTML = '<td colspan="8" style="text-align:center;">沒有記錄</td>';
+                return;
+            }
+
             Object.entries(records).forEach(([id, record]) => {
                 const row = tableBody.insertRow();
                 if (record.used) row.classList.add('used');
                 
                 // 檢查是否有需要添加刪除線的券
-                const draw1Strikethrough = record.draw1 === '-' || record.draw1 === 'ND' || record.strikethrough?.includes('draw1');
-                const draw2Strikethrough = record.draw2 === '-' || record.draw2 === 'ND' || record.strikethrough?.includes('draw2');
-                const draw3Strikethrough = record.draw3 === '-' || record.draw3 === 'ND' || record.strikethrough?.includes('draw3');
+                const draw1Strikethrough = record.draw1 === '-' || record.draw1 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw1'));
+                const draw2Strikethrough = record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'));
+                const draw3Strikethrough = record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'));
                 
                 row.innerHTML = `
                     <td>${record.week}</td>
@@ -558,11 +673,36 @@
                 
                 // 更新Firebase中的記錄
                 await recordRef.update({ strikethrough });
+                
+                // 檢查是否需要自動勾選"已使用"
+                const currentValue = record[field];
+                const isNumericalCoupon = ['10', '20', '50', '100', '200'].includes(currentValue);
+                
+                if (isNumericalCoupon) {
+                    // 檢查所有數值券是否都有刪除線
+                    const hasDraw1 = ['10', '20', '50', '100', '200'].includes(record.draw1);
+                    const hasDraw2 = ['10', '20', '50', '100', '200'].includes(record.draw2);
+                    const hasDraw3 = ['10', '20', '50', '100', '200'].includes(record.draw3);
+                    
+                    const draw1Strikethrough = !hasDraw1 || strikethrough.includes('draw1');
+                    const draw2Strikethrough = !hasDraw2 || strikethrough.includes('draw2');
+                    const draw3Strikethrough = !hasDraw3 || strikethrough.includes('draw3');
+                    
+                    if (draw1Strikethrough && draw2Strikethrough && draw3Strikethrough) {
+                        await recordRef.update({ used: true });
+                        // 更新UI中的checkbox
+                        const row = element.closest('tr');
+                        if (row) {
+                            const checkbox = row.querySelector('input[type="checkbox"]');
+                            if (checkbox) checkbox.checked = true;
+                            row.classList.add('used');
+                        }
+                    }
+                }
             } catch (error) {
                 console.error("更新刪除線失敗:", error);
             }
         };
-
 
         // 刪除記錄
         window.deleteRecord = async (recordId) => {
@@ -585,6 +725,12 @@
 
             try {
                 await db.ref(`users/${user.uid}/records/${recordId}/used`).set(checkbox.checked);
+                const row = checkbox.closest('tr');
+                if (checkbox.checked) {
+                    row.classList.add('used');
+                } else {
+                    row.classList.remove('used');
+                }
             } catch (error) {
                 console.error("更新狀態失敗:", error);
             }
@@ -602,6 +748,15 @@
                 alert("請選擇平台！");
                 return;
             }
+        
+            // 檢查平台是否已被禁用（表示已存在記錄）
+            const platformSelect = document.getElementById("platform");
+            const selectedOption = platformSelect.options[platformSelect.selectedIndex];
+            if (selectedOption.disabled) {
+                alert("本周此平台已存在記錄，請選擇其他平台！");
+                return;
+            }
+
             if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
                 alert("請選擇券1, 券2, 券3！");
                 return;
@@ -653,8 +808,8 @@
                 }
             });
 
-            document.getElementById('weeklySummary').innerText = 
-                `本周消費券：MOP ${formatNumber(totalCoupons)}\n需消費：MOP ${formatNumber(totalConsumption)}`;
+            document.getElementById('weeklySummary').innerHTML = 
+                `本周消費券：MOP ${formatNumber(totalCoupons)}<br>需消費：MOP ${formatNumber(totalConsumption)}`;
             document.getElementById('weeklySummary').style.color = 'green';
         }
 
@@ -667,7 +822,8 @@
         function getWeekNumber(date) {
             const startOfFirstWeek = new Date(2025, 2, 24); // 2025年3月24日為第一周開始
             const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
-            return Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
+            const weekNum = Math.floor((date - startOfFirstWeek) / millisecondsPerWeek) + 1;
+            return Math.max(1, Math.min(10, weekNum)); // Ensure week is between 1-10
         }
 
         // 篩選記錄
@@ -675,18 +831,60 @@
             const week = document.getElementById("filterWeek").value;
             const platform = document.getElementById("filterPlatform").value;
             const rows = document.querySelectorAll("#recordsTable tbody tr");
+            const currentWeek = getWeekNumber(new Date());
 
+            let hasVisibleRows = false;
+            
             rows.forEach(row => {
+                if (row.cells.length === 0) return; // Skip empty rows
+                
                 const weekCell = row.cells[0].innerText;
                 const platformCell = row.cells[1].innerText;
                 const matchWeek = !week || weekCell === week;
                 const matchPlatform = !platform || platformCell === platform;
-                row.style.display = matchWeek && matchPlatform ? "" : "none";
+                
+                if (matchWeek && matchPlatform) {
+                    row.style.display = "";
+                    hasVisibleRows = true;
+                } else {
+                    row.style.display = "none";
+                }
             });
+
+            // Update platform options for current week
+            if (week === currentWeek.toString()) {
+                const recordsRef = db.ref(`users/${auth.currentUser.uid}/records`);
+                recordsRef.once('value').then(snapshot => {
+                    const records = snapshot.val() || {};
+                    updatePlatformOptions(records, currentWeek);
+                });
+            } else {
+                // Reset platform options if not viewing current week
+                const platformSelect = document.getElementById("platform");
+                Array.from(platformSelect.options).forEach(option => {
+                    option.disabled = false;
+                    option.style.color = '';
+                });
+            }
+            
+            // Show message if no records found
+            const tableBody = document.querySelector("#recordsTable tbody");
+            if (tableBody && !hasVisibleRows) {
+                const existingMessage = tableBody.querySelector("tr td[colspan='8']");
+                if (!existingMessage) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `<td colspan="8" style="text-align:center;">沒有找到匹配的記錄</td>`;
+                    tableBody.appendChild(emptyRow);
+                }
+            } else if (tableBody && hasVisibleRows) {
+                const existingMessage = tableBody.querySelector("tr td[colspan='8']");
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+            }
         };
 
-
-        // 新增函數：更新平台選擇狀態
+        // 更新平台選擇狀態
         function updatePlatformOptions(records, currentWeek) {
             const platformSelect = document.getElementById("platform");
             const usedPlatforms = new Set();
@@ -709,86 +907,6 @@
                 }
             });
         }
-
-        // 修改 addRecord 函數，增加重複檢查
-        window.addRecord = function() {
-            const platform = document.getElementById("platform").value;
-            let draw1 = document.getElementById("draw1").value;
-            let draw2 = document.getElementById("draw2").value;
-            let draw3 = document.getElementById("draw3").value;
-            const giveUp = document.getElementById("giveUp").checked;
-
-            if (!platform) {
-                alert("請選擇平台！");
-                return;
-            }
-        
-            // 檢查平台是否已被禁用（表示已存在記錄）
-            const platformSelect = document.getElementById("platform");
-            const selectedOption = platformSelect.options[platformSelect.selectedIndex];
-            if (selectedOption.disabled) {
-                alert("本周此平台已存在記錄，請選擇其他平台！");
-                return;
-            }
-
-            if (!giveUp && (draw1 === "" || draw2 === "" || draw3 === "")) {
-                alert("請選擇券1, 券2, 券3！");
-                return;
-            }
-            if (giveUp) {
-                draw1 = draw2 = draw3 = "ND";
-            }
-
-            const weekNumber = getWeekNumber(new Date());
-            const record = {
-                week: weekNumber,
-                platform,
-                draw1,
-                draw2,
-                draw3,
-                consumption: calculateConsumption(draw1, draw2, draw3),
-                used: giveUp
-            };
-
-            saveRecordToFirebase(record);
-            document.getElementById("recordForm").reset();
-            document.getElementById("draw1").value = "-";
-            document.getElementById("draw2").value = "-";
-            document.getElementById("draw3").value = "-";
-        };
-
-        // 在 filterRecords 函數中增加重置平台選擇狀態
-        window.filterRecords = function() {
-            const week = document.getElementById("filterWeek").value;
-            const platform = document.getElementById("filterPlatform").value;
-            const rows = document.querySelectorAll("#recordsTable tbody tr");
-
-            rows.forEach(row => {
-                const weekCell = row.cells[0].innerText;
-                const platformCell = row.cells[1].innerText;
-                const matchWeek = !week || weekCell === week;
-                const matchPlatform = !platform || platformCell === platform;
-                row.style.display = matchWeek && matchPlatform ? "" : "none";
-            });
-        
-            // 如果篩選的是當前周，更新平台選擇狀態
-            const currentWeek = getWeekNumber(new Date());
-            if (week === currentWeek.toString()) {
-                const recordsRef = db.ref(`users/${auth.currentUser.uid}/records`);
-                recordsRef.once('value').then(snapshot => {
-                    const records = snapshot.val() || {};
-                    updatePlatformOptions(records, currentWeek);
-                });
-            } else {
-                // 重置平台選擇狀態
-                const platformSelect = document.getElementById("platform");
-                Array.from(platformSelect.options).forEach(option => {
-                    option.disabled = false;
-                    option.style.color = '';
-                });
-            }
-        };
-
 
         // 導出CSV
         window.exportCSV = function() {
@@ -880,9 +998,62 @@
             return weekNumber;
         }
 
+        // Platform visibility settings
+        function initPlatformSettings() {
+            const hiddenPlatforms = JSON.parse(localStorage.getItem('hiddenPlatforms')) || [];
+            document.querySelectorAll('.platform-toggle').forEach(checkbox => {
+                checkbox.checked = hiddenPlatforms.includes(checkbox.value);
+                checkbox.addEventListener('change', updatePlatformVisibility);
+            });
+            updatePlatformVisibility();
+        }
+
+        function updatePlatformVisibility() {
+            const hiddenPlatforms = [];
+            document.querySelectorAll('.platform-toggle:checked').forEach(checkbox => {
+                hiddenPlatforms.push(checkbox.value);
+            });
+            localStorage.setItem('hiddenPlatforms', JSON.stringify(hiddenPlatforms));
+            
+            // Update platform dropdowns
+            const platformSelects = [
+                document.getElementById('platform'),
+                document.getElementById('filterPlatform')
+            ];
+            
+            platformSelects.forEach(select => {
+                if (!select) return;
+                
+                Array.from(select.options).forEach(option => {
+                    if (option.value && hiddenPlatforms.includes(option.value)) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+            });
+        }
+
+        // Settings modal functions
+        window.openSettings = function() {
+            document.getElementById('settingsModal').style.display = 'flex';
+        };
+
+        window.closeSettings = function() {
+            document.getElementById('settingsModal').style.display = 'none';
+        };
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('settingsModal')) {
+                closeSettings();
+            }
+        };
+
         // 初始化頁面
         updateTimeInfo();
         setInterval(updateTimeInfo, 60000); // 每分鐘更新時間
+        initPlatformSettings();
 
         // 隱私設置
         document.getElementById('analyticsOptOut').addEventListener('change', function(e) {

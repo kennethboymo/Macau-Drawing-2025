@@ -779,30 +779,67 @@
         window.toggleUsed = async (recordId, checkbox) => {
             const user = auth.currentUser;
             if (!user) return;
-
+        
             try {
-                await db.ref(`users/${user.uid}/records/${recordId}/used`).set(checkbox.checked);
+                const recordRef = db.ref(`users/${user.uid}/records/${recordId}`);
+                const snapshot = await recordRef.once('value');
+                const record = snapshot.val();
                 
+                // 如果勾選"已使用"，則為所有券添加刪除線
+                // 如果取消勾選，則移除所有券的刪除線
+                let strikethrough = record.strikethrough || [];
+        
+                if (checkbox.checked) {
+                    // 添加所有券的刪除線（如果尚未存在）
+                    if (!strikethrough.includes('draw1')) strikethrough.push('draw1');
+                    if (!strikethrough.includes('draw2')) strikethrough.push('draw2');
+                    if (!strikethrough.includes('draw3')) strikethrough.push('draw3');
+                } else {
+                    // 移除所有券的刪除線
+                    strikethrough = strikethrough.filter(item => 
+                        item !== 'draw1' && item !== 'draw2' && item !== 'draw3'
+                    );
+                }
+        
+                // 更新記錄
+                await recordRef.update({ 
+                    used: checkbox.checked,
+                    strikethrough,
+                    consumption: calculateConsumption({...record, strikethrough})
+                });
+        
                 // 更新本地緩存
                 const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
                 if (cachedRecords[recordId]) {
                     cachedRecords[recordId].used = checkbox.checked;
+                    cachedRecords[recordId].strikethrough = strikethrough;
+                    cachedRecords[recordId].consumption = calculateConsumption({...record, strikethrough});
                     localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
                 }
-                
+        
+                // 更新UI
                 const row = checkbox.closest('tr');
                 if (checkbox.checked) {
                     row.classList.add('used');
+                    // 為所有券添加刪除線樣式
+                    row.cells[2].classList.add('strikethrough');
+                    row.cells[3].classList.add('strikethrough');
+                    row.cells[4].classList.add('strikethrough');
                 } else {
                     row.classList.remove('used');
+                    // 移除所有券的刪除線樣式
+                    row.cells[2].classList.remove('strikethrough');
+                    row.cells[3].classList.remove('strikethrough');
+                    row.cells[4].classList.remove('strikethrough');
                 }
-                
+        
                 // 重新計算並更新匯總
                 loadUserRecords(user.uid);
             } catch (error) {
                 console.error("更新狀態失敗:", error);
             }
         };
+
 
         // 添加記錄
         window.addRecord = function() {

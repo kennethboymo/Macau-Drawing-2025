@@ -443,7 +443,7 @@
         </div>
 
         <div class="summary-info" id="weeklySummary">
-            本周消費券：MOP 0<br>需消費：MOP 0
+            本周消費券：MOP 0 余 MOP 0<br>需消費：MOP 0
         </div>
 
         <div class="table-container">
@@ -549,7 +549,7 @@
             }
         });
 
-        // 保存記錄到Firebase
+        // 保存記錄到Firebase和本地緩存
         async function saveRecordToFirebase(record) {
             const user = auth.currentUser;
             if (!user) return;
@@ -564,11 +564,18 @@
             const recordId = Date.now();
             
             try {
+                // 計算消費金額（只計算未加刪除線的券）
+                record.consumption = calculateConsumption(record);
+                
                 await db.ref(`users/${userId}/records/${recordId}`).set({
                     ...record,
                     createdAt: firebase.database.ServerValue.TIMESTAMP
                 });
-                console.log("記錄已保存");
+                
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${userId}`)) || {};
+                cachedRecords[recordId] = record;
+                localStorage.setItem(`macaudraw_records_${userId}`, JSON.stringify(cachedRecords));
                 
                 // Refresh the records after saving
                 loadUserRecords(userId);
@@ -592,12 +599,24 @@
             );
         }
 
-        // 從Firebase加載記錄
+        // 從Firebase加載記錄，優先使用本地緩存
         function loadUserRecords(userId) {
+            // 先從本地緩存加載
+            const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${userId}`)) || {};
+            if (Object.keys(cachedRecords).length > 0) {
+                renderRecords(cachedRecords);
+                updateWeeklySummary(cachedRecords);
+            }
+
+            // 然後從Firebase加載最新數據
             const recordsRef = db.ref(`users/${userId}/records`);
             
             recordsRef.on('value', (snapshot) => {
                 const records = snapshot.val() || {};
+                
+                // 更新本地緩存
+                localStorage.setItem(`macaudraw_records_${userId}`, JSON.stringify(records));
+                
                 renderRecords(records);
                 updateWeeklySummary(records);
 
@@ -633,17 +652,29 @@
                 const draw2Strikethrough = record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'));
                 const draw3Strikethrough = record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'));
                 
+                // 計算消費金額（只計算未加刪除線的券）
+                const consumption = calculateConsumption(record);
+                
                 row.innerHTML = `
                     <td>${record.week}</td>
                     <td>${record.platform}</td>
                     <td class="${draw1Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw1', this)">${record.draw1}</td>
                     <td class="${draw2Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw2', this)">${record.draw2}</td>
                     <td class="${draw3Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw3', this)">${record.draw3}</td>
-                    <td>${formatNumber(record.consumption)}</td>
+                    <td>${formatNumber(consumption)}</td>
                     <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed('${id}', this)"></td>
                     <td><button onclick="deleteRecord('${id}')">刪除</button></td>
                 `;
             });
+        }
+
+        // 計算消費金額（只計算未加刪除線的券）
+        function calculateConsumption(record) {
+            const draw1Value = (record.draw1 === '-' || record.draw1 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw1'))) ? 0 : parseInt(record.draw1) || 0;
+            const draw2Value = (record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'))) ? 0 : parseInt(record.draw2) || 0;
+            const draw3Value = (record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'))) ? 0 : parseInt(record.draw3) || 0;
+            
+            return (draw1Value + draw2Value + draw3Value) * 3;
         }
 
         // 切換刪除線
@@ -672,7 +703,18 @@
                 }
                 
                 // 更新Firebase中的記錄
-                await recordRef.update({ strikethrough });
+                await recordRef.update({ 
+                    strikethrough,
+                    consumption: calculateConsumption({...record, strikethrough}) // 重新計算消費金額
+                });
+                
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                if (cachedRecords[recordId]) {
+                    cachedRecords[recordId].strikethrough = strikethrough;
+                    cachedRecords[recordId].consumption = calculateConsumption({...record, strikethrough});
+                    localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                }
                 
                 // 檢查是否需要自動勾選"已使用"
                 const currentValue = record[field];
@@ -690,6 +732,11 @@
                     
                     if (draw1Strikethrough && draw2Strikethrough && draw3Strikethrough) {
                         await recordRef.update({ used: true });
+                        // 更新本地緩存
+                        if (cachedRecords[recordId]) {
+                            cachedRecords[recordId].used = true;
+                            localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                        }
                         // 更新UI中的checkbox
                         const row = element.closest('tr');
                         if (row) {
@@ -699,6 +746,9 @@
                         }
                     }
                 }
+                
+                // 重新計算並更新匯總
+                loadUserRecords(user.uid);
             } catch (error) {
                 console.error("更新刪除線失敗:", error);
             }
@@ -712,6 +762,13 @@
             if (confirm('確定要刪除此記錄嗎？')) {
                 try {
                     await db.ref(`users/${user.uid}/records/${recordId}`).remove();
+                    
+                    // 更新本地緩存
+                    const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                    if (cachedRecords[recordId]) {
+                        delete cachedRecords[recordId];
+                        localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                    }
                 } catch (error) {
                     console.error("刪除失敗:", error);
                 }
@@ -725,12 +782,23 @@
 
             try {
                 await db.ref(`users/${user.uid}/records/${recordId}/used`).set(checkbox.checked);
+                
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                if (cachedRecords[recordId]) {
+                    cachedRecords[recordId].used = checkbox.checked;
+                    localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                }
+                
                 const row = checkbox.closest('tr');
                 if (checkbox.checked) {
                     row.classList.add('used');
                 } else {
                     row.classList.remove('used');
                 }
+                
+                // 重新計算並更新匯總
+                loadUserRecords(user.uid);
             } catch (error) {
                 console.error("更新狀態失敗:", error);
             }
@@ -772,7 +840,7 @@
                 draw1,
                 draw2,
                 draw3,
-                consumption: calculateConsumption(draw1, draw2, draw3),
+                consumption: 0, // 初始化為0，將在保存時計算
                 used: giveUp
             };
 
@@ -783,33 +851,37 @@
             document.getElementById("draw3").value = "-";
         };
 
-        // 計算消費金額
-        function calculateConsumption(draw1, draw2, draw3) {
-            const values = [draw1, draw2, draw3].map(val => {
-                if (val === '-' || val === 'ND') return 0;
-                return parseInt(val) || 0;
-            });
-            const sum = values.reduce((a, b) => a + b, 0);
-            return sum * 3; // 消費金額 = (券1+券2+券3)*3
-        }
-
         // 更新周摘要
         function updateWeeklySummary(records) {
             const currentWeek = getWeekNumber(new Date());
             let totalCoupons = 0;
+            let remainingCoupons = 0;
             let totalConsumption = 0;
+            let remainingConsumption = 0;
 
             Object.values(records).forEach(record => {
                 if (parseInt(record.week) === currentWeek) {
+                    // 計算總券值（包括已使用的）
                     if (record.draw1 !== "ND") totalCoupons += parseInt(record.draw1) || 0;
                     if (record.draw2 !== "ND") totalCoupons += parseInt(record.draw2) || 0;
                     if (record.draw3 !== "ND") totalCoupons += parseInt(record.draw3) || 0;
-                    totalConsumption += parseInt(record.consumption) || 0;
+                    totalConsumption += calculateConsumption({
+                        ...record,
+                        strikethrough: [] // 計算總消費時不考慮刪除線
+                    });
+                    
+                    // 計算剩余券值（未加刪除線的）
+                    const draw1Value = (record.draw1 === '-' || record.draw1 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw1'))) ? 0 : parseInt(record.draw1) || 0;
+                    const draw2Value = (record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'))) ? 0 : parseInt(record.draw2) || 0;
+                    const draw3Value = (record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'))) ? 0 : parseInt(record.draw3) || 0;
+                    
+                    remainingCoupons += draw1Value + draw2Value + draw3Value;
+                    remainingConsumption += (draw1Value + draw2Value + draw3Value) * 3;
                 }
             });
 
             document.getElementById('weeklySummary').innerHTML = 
-                `本周消費券：MOP ${formatNumber(totalCoupons)}<br>需消費：MOP ${formatNumber(totalConsumption)}`;
+                `本周消費券：MOP ${formatNumber(totalCoupons)} 余 MOP ${formatNumber(remainingCoupons)}<br>需消費：MOP ${formatNumber(remainingConsumption)}`;
             document.getElementById('weeklySummary').style.color = 'green';
         }
 

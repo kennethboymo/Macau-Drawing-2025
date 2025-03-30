@@ -745,15 +745,15 @@
                 renderRecords(records);
                 updateWeeklySummary(records);
 
-                // Set current week filter and apply it
-                const currentWeek = getWeekNumber(new Date());
-                document.getElementById("filterWeek").value = currentWeek;
-                
-                // Apply filter after records are rendered
-                setTimeout(() => {
+                // 只在初始載入時設置當前周篩選
+                if (!document.getElementById("filterWeek").value) {
+                    const currentWeek = getWeekNumber(new Date());
+                    document.getElementById("filterWeek").value = currentWeek;
+                    
+                    // 只在初始載入時應用篩選
                     filterRecords();
                     updatePlatformOptions(records, currentWeek);
-                }, 100);
+                }
             });
         }
 
@@ -1314,7 +1314,7 @@
             });
         }
 
-        // 生成平台統計圖
+        // 生成平台統計圖（修改後的版本）
         function generatePlatformChart(records) {
             const platforms = ['Alipay', 'BOC', 'GFB', 'ICBC', 'Luso', 'MPay', 'TFB', 'UePay'];
             const amounts = Array(platforms.length).fill(0);
@@ -1322,12 +1322,13 @@
             records.forEach(record => {
                 const platformIndex = platforms.indexOf(record.platform);
                 if (platformIndex !== -1) {
-                    // 只計算未加刪除線的券
-                    const draw1Value = (!record.strikethrough || !record.strikethrough.includes('draw1')) ? parseInt(record.draw1) || 0 : 0;
-                    const draw2Value = (!record.strikethrough || !record.strikethrough.includes('draw2')) ? parseInt(record.draw2) || 0 : 0;
-                    const draw3Value = (!record.strikethrough || !record.strikethrough.includes('draw3')) ? parseInt(record.draw3) || 0 : 0;
+                    // 計算券面額總和（不考慮刪除線和已使用狀態）
+                    const draw1Value = ['10', '20', '50', '100', '200'].includes(record.draw1) ? parseInt(record.draw1) : 0;
+                    const draw2Value = ['10', '20', '50', '100', '200'].includes(record.draw2) ? parseInt(record.draw2) : 0;
+                    const draw3Value = ['10', '20', '50', '100', '200'].includes(record.draw3) ? parseInt(record.draw3) : 0;
                     
-                    amounts[platformIndex] += (draw1Value + draw2Value + draw3Value) * 3;
+                    // 直接加總券面額，不乘以3（不計算消費金額）
+                    amounts[platformIndex] += (draw1Value + draw2Value + draw3Value);
                 }
             });
             
@@ -1337,7 +1338,7 @@
                 data: {
                     labels: platforms,
                     datasets: [{
-                        label: '累計金額 (MOP)',
+                        label: '累計券面額 (MOP)', // 修改標籤說明
                         data: amounts,
                         backgroundColor: 'rgba(40, 167, 69, 0.6)',
                         borderColor: 'rgba(40, 167, 69, 1)',
@@ -1348,12 +1349,73 @@
                     responsive: true,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'MOP'
+                            }
                         }
                     }
                 }
             });
         }
+
+        // 生成面額統計圖（修改後的版本）
+        function generateCouponChart(records) {
+            const couponValues = ['10', '20', '50', '100', '200'];
+            const counts = [0, 0, 0, 0, 0];
+            
+            records.forEach(record => {
+                // 統計所有券，不考慮刪除線和已使用狀態
+                const index1 = couponValues.indexOf(record.draw1);
+                if (index1 !== -1) counts[index1]++;
+                
+                const index2 = couponValues.indexOf(record.draw2);
+                if (index2 !== -1) counts[index2]++;
+                
+                const index3 = couponValues.indexOf(record.draw3);
+                if (index3 !== -1) counts[index3]++;
+            });
+            
+            const ctx = document.getElementById('couponChart').getContext('2d');
+            couponChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: couponValues.map(v => `MOP ${v}`),
+                    datasets: [{
+                        label: '張數 (所有記錄)', // 修改標籤說明
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(255, 99, 132, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
 
         // 初始化時間顯示
         function updateTimeInfo() {

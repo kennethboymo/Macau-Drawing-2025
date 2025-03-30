@@ -1168,7 +1168,16 @@
         document.getElementById('analyticsOptOut').addEventListener('change', function(e) {
             localStorage.setItem('analyticsOptOut', e.target.checked);
         });
-        document.getElementById('analyticsOptOut').checked = localStorage.getItem('analyticsOptOut') === 'true';
+        // 修改隱私設置初始化代碼
+        document.getElementById('analyticsOptOut').addEventListener('change', function(e) {
+            console.log('Analytics opt-out changed to:', e.target.checked);
+            localStorage.setItem('analyticsOptOut', e.target.checked);
+        });
+
+        // 初始化時添加調試輸出
+        const optOutValue = localStorage.getItem('analyticsOptOut');
+        console.log('Initial analyticsOptOut value:', optOutValue);
+        document.getElementById('analyticsOptOut').checked = optOutValue === 'true';    
     </script>
 </body>
 </html>

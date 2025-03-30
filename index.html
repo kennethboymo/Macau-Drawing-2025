@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>消費大獎賞2025個人記錄</title>
+    <title>社區消費大獎賞2025個人記錄</title>
     <style>
         :root {
             --primary-color: #28a745;
@@ -281,6 +281,26 @@
         .settings-button:hover {
             background-color: #5a6268;
         }
+        /* Stats Button */
+        .stats-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: #17a2b8;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        .stats-button:hover {
+            background-color: #138496;
+        }
         /* Modal */
         .modal {
             display: none;
@@ -331,12 +351,62 @@
             align-items: center;
             gap: 8px;
         }
+        /* Stats Filters */
+        .stats-filters {
+            display: flex;
+            flex-direction: row;
+            gap: var(--padding);
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .stats-filters > div {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+        }
+        .stats-filters label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .stats-filters select {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+        .stats-filters button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .stats-filters button:hover {
+            background-color: #1e7e34;
+        }
+        /* Chart Container */
+        .chart-container {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+        }
+        .chart-container h4 {
+            margin-top: 0;
+            text-align: center;
+            color: var(--primary-color);
+        }
         @media (max-width: 480px) {
-            .filters {
+            .filters, .stats-filters {
                 flex-direction: column;
                 align-items: stretch;
             }
-            .filters > div {
+            .filters > div, .stats-filters > div {
                 flex-direction: column;
                 align-items: stretch;
             }
@@ -482,12 +552,61 @@
         </div>
     </div>
 
+    <!-- Stats Button -->
+    <div class="stats-button" onclick="openStats()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+    </div>
+
     <!-- Settings Button -->
     <div class="settings-button" onclick="openSettings()">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal" id="statsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">統計圖表</div>
+                <button class="close-modal" onclick="closeStats()">&times;</button>
+            </div>
+            
+            <div class="stats-filters">
+                <div>
+                    <label for="statsWeekFilter">周數:</label>
+                    <select id="statsWeekFilter">
+                        <option value="all">全部</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                    </select>
+                </div>
+                <button onclick="generateCharts()">生成圖表</button>
+            </div>
+            
+            <div class="chart-container">
+                <h4>不同面額的張數統計</h4>
+                <canvas id="couponChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h4>不同平台累計金額</h4>
+                <canvas id="platformChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <!-- Settings Modal -->
@@ -519,6 +638,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
         // 請替換為您的Firebase配置
@@ -536,6 +657,10 @@
         const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.database();
+
+        // 圖表實例變量
+        let couponChartInstance = null;
+        let platformChartInstance = null;
 
         // 匿名登入狀態監聽
         auth.onAuthStateChanged((user) => {
@@ -1089,6 +1214,147 @@
             reader.readAsText(file);
         };
 
+        // 統計圖表功能
+        window.openStats = function() {
+            document.getElementById('statsModal').style.display = 'flex';
+            // 設置默認篩選為當前周
+            const currentWeek = getWeekNumber(new Date());
+            document.getElementById('statsWeekFilter').value = currentWeek;
+            // 自動生成圖表
+            generateCharts();
+        };
+
+        window.closeStats = function() {
+            document.getElementById('statsModal').style.display = 'none';
+        };
+
+        // 生成圖表函數
+        window.generateCharts = function() {
+            const weekFilter = document.getElementById('statsWeekFilter').value;
+            const records = getFilteredRecords(weekFilter);
+            
+            // 銷毀舊圖表
+            if (couponChartInstance) couponChartInstance.destroy();
+            if (platformChartInstance) platformChartInstance.destroy();
+            
+            // 生成新圖表
+            generateCouponChart(records);
+            generatePlatformChart(records);
+        };
+
+        // 獲取篩選後的記錄
+        function getFilteredRecords(weekFilter) {
+            const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${auth.currentUser.uid}`)) || {};
+            const records = Object.values(cachedRecords);
+            
+            if (weekFilter === 'all') {
+                return records;
+            }
+            
+            return records.filter(record => record.week.toString() === weekFilter);
+        }
+
+        // 生成面額統計圖
+        function generateCouponChart(records) {
+            const couponValues = ['10', '20', '50', '100', '200'];
+            const counts = [0, 0, 0, 0, 0];
+            
+            records.forEach(record => {
+                // 只統計未加刪除線的券
+                if (!record.strikethrough || !record.strikethrough.includes('draw1')) {
+                    const index = couponValues.indexOf(record.draw1);
+                    if (index !== -1) counts[index]++;
+                }
+                if (!record.strikethrough || !record.strikethrough.includes('draw2')) {
+                    const index = couponValues.indexOf(record.draw2);
+                    if (index !== -1) counts[index]++;
+                }
+                if (!record.strikethrough || !record.strikethrough.includes('draw3')) {
+                    const index = couponValues.indexOf(record.draw3);
+                    if (index !== -1) counts[index]++;
+                }
+            });
+            
+            const ctx = document.getElementById('couponChart').getContext('2d');
+            couponChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: couponValues.map(v => `MOP ${v}`),
+                    datasets: [{
+                        label: '張數',
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(255, 99, 132, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 生成平台統計圖
+        function generatePlatformChart(records) {
+            const platforms = ['Alipay', 'BOC', 'GFB', 'ICBC', 'Luso', 'MPay', 'TFB', 'UePay'];
+            const amounts = Array(platforms.length).fill(0);
+            
+            records.forEach(record => {
+                const platformIndex = platforms.indexOf(record.platform);
+                if (platformIndex !== -1) {
+                    // 只計算未加刪除線的券
+                    const draw1Value = (!record.strikethrough || !record.strikethrough.includes('draw1')) ? parseInt(record.draw1) || 0 : 0;
+                    const draw2Value = (!record.strikethrough || !record.strikethrough.includes('draw2')) ? parseInt(record.draw2) || 0 : 0;
+                    const draw3Value = (!record.strikethrough || !record.strikethrough.includes('draw3')) ? parseInt(record.draw3) || 0 : 0;
+                    
+                    amounts[platformIndex] += (draw1Value + draw2Value + draw3Value) * 3;
+                }
+            });
+            
+            const ctx = document.getElementById('platformChart').getContext('2d');
+            platformChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: platforms,
+                    datasets: [{
+                        label: '累計金額 (MOP)',
+                        data: amounts,
+                        backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
         // 初始化時間顯示
         function updateTimeInfo() {
             const now = new Date();
@@ -1154,8 +1420,10 @@
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            if (event.target === document.getElementById('settingsModal')) {
+            if (event.target === document.getElementById('settingsModal') || 
+                event.target === document.getElementById('statsModal')) {
                 closeSettings();
+                closeStats();
             }
         };
 
@@ -1163,11 +1431,7 @@
         updateTimeInfo();
         setInterval(updateTimeInfo, 60000); // 每分鐘更新時間
         initPlatformSettings();
-
-        // 隱私設置
-        document.getElementById('analyticsOptOut').addEventListener('change', function(e) {
-            localStorage.setItem('analyticsOptOut', e.target.checked);
-        });
+        
         // 修改隱私設置初始化代碼
         document.getElementById('analyticsOptOut').addEventListener('change', function(e) {
             console.log('Analytics opt-out changed to:', e.target.checked);

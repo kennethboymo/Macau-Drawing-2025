@@ -641,7 +641,8 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script>        // Firebase配置
+    <script>
+        // 請替換為您的Firebase配置
         const firebaseConfig = {
             apiKey: "AIzaSyCRjL_wJqYvufMvtDiwEuN_vYso4cTKaKA",
             authDomain: "macau-draw.firebaseapp.com",
@@ -657,92 +658,310 @@
         const auth = firebase.auth();
         const db = firebase.database();
 
-        // 切換刪除線（修改後版本）
-        window.toggleStrikethrough = async function(recordId, field, element) {
+        // 圖表實例變量
+        let couponChartInstance = null;
+        let platformChartInstance = null;
+
+        // 匿名登入狀態監聽
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log("匿名用戶已登入:", user.uid);
+                loadUserRecords(user.uid);
+            } else {
+                auth.signInAnonymously().catch((error) => {
+                    console.error("匿名登入失敗:", error);
+                });
+            }
+        });
+
+        // 保存記錄到Firebase和本地緩存
+        async function saveRecordToFirebase(record) {
             const user = auth.currentUser;
             if (!user) return;
 
-            // 保存當前篩選條件
-            const currentWeekFilter = document.getElementById("filterWeek").value;
-            const currentPlatformFilter = document.getElementById("filterPlatform").value;
+            // 數據驗證
+            if (!validateRecord(record)) {
+                alert("無效的記錄數據！");
+                return;
+            }
+
+            const userId = user.uid;
+            const recordId = Date.now();
+            
+            try {
+                // 計算消費金額（只計算未加刪除線的券）
+                record.consumption = calculateConsumption(record);
+                
+                await db.ref(`users/${userId}/records/${recordId}`).set({
+                    ...record,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${userId}`)) || {};
+                cachedRecords[recordId] = record;
+                localStorage.setItem(`macaudraw_records_${userId}`, JSON.stringify(cachedRecords));
+                
+                // Refresh the records after saving
+                loadUserRecords(userId);
+            } catch (error) {
+                console.error("保存失敗:", error);
+                alert("保存失敗，請檢查網絡連接");
+            }
+        }
+
+        // 數據驗證函數
+        function validateRecord(record) {
+            const validPlatforms = ['Alipay', 'BOC', 'GFB', 'ICBC', 'Luso', 'MPay', 'TFB', 'UePay'];
+            const validCoupons = ['10', '20', '50', '100', '200', '-', 'ND'];
+            
+            return (
+                validPlatforms.includes(record.platform) &&
+                validCoupons.includes(record.draw1) &&
+                validCoupons.includes(record.draw2) &&
+                validCoupons.includes(record.draw3) &&
+                typeof record.consumption === 'number'
+            );
+        }
+
+        // 從Firebase加載記錄，優先使用本地緩存
+        function loadUserRecords(userId) {
+            // 先從本地緩存加載
+            const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${userId}`)) || {};
+            if (Object.keys(cachedRecords).length > 0) {
+                renderRecords(cachedRecords);
+                updateWeeklySummary(cachedRecords);
+            }
+
+            // 然後從Firebase加載最新數據
+            const recordsRef = db.ref(`users/${userId}/records`);
+            
+            recordsRef.on('value', (snapshot) => {
+                const records = snapshot.val() || {};
+                
+                // 更新本地緩存
+                localStorage.setItem(`macaudraw_records_${userId}`, JSON.stringify(records));
+                
+                renderRecords(records);
+                updateWeeklySummary(records);
+
+                // 只在初始載入時設置當前周篩選
+                if (!document.getElementById("filterWeek").value) {
+                    const currentWeek = getWeekNumber(new Date());
+                    document.getElementById("filterWeek").value = currentWeek;
+                    
+                    // 只在初始載入時應用篩選
+                    filterRecords();
+                    updatePlatformOptions(records, currentWeek);
+                }
+            });
+        }
+
+        // 渲染記錄到表格
+        function renderRecords(records) {
+            const tableBody = document.getElementById('recordsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            if (Object.keys(records).length === 0) {
+                const emptyRow = tableBody.insertRow();
+                emptyRow.innerHTML = '<td colspan="8" style="text-align:center;">沒有記錄</td>';
+                return;
+            }
+
+            Object.entries(records).forEach(([id, record]) => {
+                const row = tableBody.insertRow();
+                if (record.used) row.classList.add('used');
+                
+                // 檢查是否有需要添加刪除線的券
+                const draw1Strikethrough = record.draw1 === '-' || record.draw1 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw1'));
+                const draw2Strikethrough = record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'));
+                const draw3Strikethrough = record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'));
+                
+                // 計算消費金額（只計算未加刪除線的券）
+                const consumption = calculateConsumption(record);
+                
+                row.innerHTML = `
+                    <td>${record.week}</td>
+                    <td>${record.platform}</td>
+                    <td class="${draw1Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw1', this)">${record.draw1}</td>
+                    <td class="${draw2Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw2', this)">${record.draw2}</td>
+                    <td class="${draw3Strikethrough ? 'strikethrough' : ''}" onclick="toggleStrikethrough('${id}', 'draw3', this)">${record.draw3}</td>
+                    <td>${formatNumber(consumption)}</td>
+                    <td><input type="checkbox" ${record.used ? 'checked' : ''} onchange="toggleUsed('${id}', this)"></td>
+                    <td><button onclick="deleteRecord('${id}')">刪除</button></td>
+                `;
+            });
+        }
+
+        // 計算消費金額（只計算未加刪除線的券）
+        function calculateConsumption(record) {
+            const draw1Value = (record.draw1 === '-' || record.draw1 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw1'))) ? 0 : parseInt(record.draw1) || 0;
+            const draw2Value = (record.draw2 === '-' || record.draw2 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw2'))) ? 0 : parseInt(record.draw2) || 0;
+            const draw3Value = (record.draw3 === '-' || record.draw3 === 'ND' || (record.strikethrough && record.strikethrough.includes('draw3'))) ? 0 : parseInt(record.draw3) || 0;
+            
+            return (draw1Value + draw2Value + draw3Value) * 3;
+        }
+
+        // 切換刪除線
+        window.toggleStrikethrough = async function(recordId, field, element) {
+            const user = auth.currentUser;
+            if (!user) return;
 
             try {
                 const recordRef = db.ref(`users/${user.uid}/records/${recordId}`);
                 const snapshot = await recordRef.once('value');
                 const record = snapshot.val();
                 
-                // 更新記錄邏輯...
+                // 初始化strikethrough數組（如果不存在）
+                const strikethrough = record.strikethrough || [];
                 
-                // 重新應用篩選條件
-                document.getElementById("filterWeek").value = currentWeekFilter;
-                document.getElementById("filterPlatform").value = currentPlatformFilter;
-                filterRecords();
+                // 檢查當前欄位是否已有刪除線
+                const index = strikethrough.indexOf(field);
+                if (index === -1) {
+                    // 添加刪除線
+                    strikethrough.push(field);
+                    element.classList.add('strikethrough');
+                } else {
+                    // 移除刪除線
+                    strikethrough.splice(index, 1);
+                    element.classList.remove('strikethrough');
+                }
                 
+                // 更新Firebase中的記錄
+                await recordRef.update({ 
+                    strikethrough,
+                    consumption: calculateConsumption({...record, strikethrough}) // 重新計算消費金額
+                });
+                
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                if (cachedRecords[recordId]) {
+                    cachedRecords[recordId].strikethrough = strikethrough;
+                    cachedRecords[recordId].consumption = calculateConsumption({...record, strikethrough});
+                    localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                }
+                
+                // 檢查是否需要自動勾選"已使用"
+                const currentValue = record[field];
+                const isNumericalCoupon = ['10', '20', '50', '100', '200'].includes(currentValue);
+                
+                if (isNumericalCoupon) {
+                    // 檢查所有數值券是否都有刪除線
+                    const hasDraw1 = ['10', '20', '50', '100', '200'].includes(record.draw1);
+                    const hasDraw2 = ['10', '20', '50', '100', '200'].includes(record.draw2);
+                    const hasDraw3 = ['10', '20', '50', '100', '200'].includes(record.draw3);
+                    
+                    const draw1Strikethrough = !hasDraw1 || strikethrough.includes('draw1');
+                    const draw2Strikethrough = !hasDraw2 || strikethrough.includes('draw2');
+                    const draw3Strikethrough = !hasDraw3 || strikethrough.includes('draw3');
+                    
+                    if (draw1Strikethrough && draw2Strikethrough && draw3Strikethrough) {
+                        await recordRef.update({ used: true });
+                        // 更新本地緩存
+                        if (cachedRecords[recordId]) {
+                            cachedRecords[recordId].used = true;
+                            localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                        }
+                        // 更新UI中的checkbox
+                        const row = element.closest('tr');
+                        if (row) {
+                            const checkbox = row.querySelector('input[type="checkbox"]');
+                            if (checkbox) checkbox.checked = true;
+                            row.classList.add('used');
+                        }
+                    }
+                }
+                
+                // 重新計算並更新匯總
+                loadUserRecords(user.uid);
             } catch (error) {
                 console.error("更新刪除線失敗:", error);
             }
         };
 
-        // 切換使用狀態（修改後版本）
-        window.toggleUsed = async (recordId, checkbox) => {
+        // 刪除記錄
+        window.deleteRecord = async (recordId) => {
             const user = auth.currentUser;
             if (!user) return;
 
-            // 保存當前篩選條件
-            const currentWeekFilter = document.getElementById("filterWeek").value;
-            const currentPlatformFilter = document.getElementById("filterPlatform").value;
-
-            try {
-                // 更新記錄邏輯...
-                
-                // 重新應用篩選條件
-                document.getElementById("filterWeek").value = currentWeekFilter;
-                document.getElementById("filterPlatform").value = currentPlatformFilter;
-                filterRecords();
-                
-            } catch (error) {
-                console.error("更新狀態失敗:", error);
+            if (confirm('確定要刪除此記錄嗎？')) {
+                try {
+                    await db.ref(`users/${user.uid}/records/${recordId}`).remove();
+                    
+                    // 更新本地緩存
+                    const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                    if (cachedRecords[recordId]) {
+                        delete cachedRecords[recordId];
+                        localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
+                    }
+                } catch (error) {
+                    console.error("刪除失敗:", error);
+                }
             }
         };
 
-        // 篩選記錄函數
-        window.filterRecords = function() {
-            const week = document.getElementById("filterWeek").value;
-            const platform = document.getElementById("filterPlatform").value;
-            const rows = document.querySelectorAll("#recordsTable tbody tr");
-
-            let hasVisibleRows = false;
-            
-            rows.forEach(row => {
-                if (row.cells.length === 0) return;
+        // 切換使用狀態
+        window.toggleUsed = async (recordId, checkbox) => {
+            const user = auth.currentUser;
+            if (!user) return;
+        
+            try {
+                const recordRef = db.ref(`users/${user.uid}/records/${recordId}`);
+                const snapshot = await recordRef.once('value');
+                const record = snapshot.val();
                 
-                const weekCell = row.cells[0].innerText;
-                const platformCell = row.cells[1].innerText;
-                const matchWeek = !week || weekCell === week;
-                const matchPlatform = !platform || platformCell === platform;
-                
-                if (matchWeek && matchPlatform) {
-                    row.style.display = "";
-                    hasVisibleRows = true;
+                // 如果勾選"已使用"，則為所有券添加刪除線
+                // 如果取消勾選，則移除所有券的刪除線
+                let strikethrough = record.strikethrough || [];
+        
+                if (checkbox.checked) {
+                    // 添加所有券的刪除線（如果尚未存在）
+                    if (!strikethrough.includes('draw1')) strikethrough.push('draw1');
+                    if (!strikethrough.includes('draw2')) strikethrough.push('draw2');
+                    if (!strikethrough.includes('draw3')) strikethrough.push('draw3');
                 } else {
-                    row.style.display = "none";
+                    // 移除所有券的刪除線
+                    strikethrough = strikethrough.filter(item => 
+                        item !== 'draw1' && item !== 'draw2' && item !== 'draw3'
+                    );
                 }
-            });
-
-            // 處理無記錄顯示
-            const tableBody = document.querySelector("#recordsTable tbody");
-            if (tableBody && !hasVisibleRows) {
-                const existingMessage = tableBody.querySelector("tr td[colspan='8']");
-                if (!existingMessage) {
-                    const emptyRow = document.createElement('tr');
-                    emptyRow.innerHTML = `<td colspan="8" style="text-align:center;">沒有找到匹配的記錄</td>`;
-                    tableBody.appendChild(emptyRow);
+        
+                // 更新記錄
+                await recordRef.update({ 
+                    used: checkbox.checked,
+                    strikethrough,
+                    consumption: calculateConsumption({...record, strikethrough})
+                });
+        
+                // 更新本地緩存
+                const cachedRecords = JSON.parse(localStorage.getItem(`macaudraw_records_${user.uid}`)) || {};
+                if (cachedRecords[recordId]) {
+                    cachedRecords[recordId].used = checkbox.checked;
+                    cachedRecords[recordId].strikethrough = strikethrough;
+                    cachedRecords[recordId].consumption = calculateConsumption({...record, strikethrough});
+                    localStorage.setItem(`macaudraw_records_${user.uid}`, JSON.stringify(cachedRecords));
                 }
-            } else if (tableBody && hasVisibleRows) {
-                const existingMessage = tableBody.querySelector("tr td[colspan='8']");
-                if (existingMessage) {
-                    existingMessage.remove();
+        
+                // 更新UI
+                const row = checkbox.closest('tr');
+                if (checkbox.checked) {
+                    row.classList.add('used');
+                    // 為所有券添加刪除線樣式
+                    row.cells[2].classList.add('strikethrough');
+                    row.cells[3].classList.add('strikethrough');
+                    row.cells[4].classList.add('strikethrough');
+                } else {
+                    row.classList.remove('used');
+                    // 移除所有券的刪除線樣式
+                    row.cells[2].classList.remove('strikethrough');
+                    row.cells[3].classList.remove('strikethrough');
+                    row.cells[4].classList.remove('strikethrough');
                 }
+        
+                // 重新計算並更新匯總
+                loadUserRecords(user.uid);
+            } catch (error) {
+                console.error("更新狀態失敗:", error);
             }
         };
 

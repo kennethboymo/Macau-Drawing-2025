@@ -346,6 +346,16 @@
             gap: 8px;
             margin-bottom: 15px;
         }
+        .backup-reminder {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ffeeba;
+            text-align: center;
+            margin: 15px 0;
+            font-weight: bold;
+        }
         .platform-checkboxes label {
             display: flex;
             align-items: center;
@@ -532,6 +542,10 @@
                 </thead>
                 <tbody></tbody>
             </table>
+        </div>
+        
+        <div class="backup-reminder">
+            ⚠️ 提醒：建議定期匯出記錄備份，以防數據遺失 ⚠️
         </div>
 
         <button class="export-button" onclick="exportCSV()">匯出 CSV</button>
@@ -1322,15 +1336,15 @@
             records.forEach(record => {
                 const platformIndex = platforms.indexOf(record.platform);
                 if (platformIndex !== -1) {
-                    // 計算券面額總和（不考慮刪除線和已使用狀態）
                     const draw1Value = ['10', '20', '50', '100', '200'].includes(record.draw1) ? parseInt(record.draw1) : 0;
                     const draw2Value = ['10', '20', '50', '100', '200'].includes(record.draw2) ? parseInt(record.draw2) : 0;
                     const draw3Value = ['10', '20', '50', '100', '200'].includes(record.draw3) ? parseInt(record.draw3) : 0;
-                    
-                    // 直接加總券面額，不乘以3（不計算消費金額）
                     amounts[platformIndex] += (draw1Value + draw2Value + draw3Value);
                 }
             });
+            
+            const total = amounts.reduce((a, b) => a + b, 0);
+            const percentages = amounts.map(amount => total > 0 ? Math.round((amount / total) * 100) : 0);
             
             const ctx = document.getElementById('platformChart').getContext('2d');
             platformChartInstance = new Chart(ctx, {
@@ -1338,7 +1352,7 @@
                 data: {
                     labels: platforms,
                     datasets: [{
-                        label: '累計券面額 (MOP)', // 修改標籤說明
+                        label: '累計券面額 (MOP)',
                         data: amounts,
                         backgroundColor: 'rgba(40, 167, 69, 0.6)',
                         borderColor: 'rgba(40, 167, 69, 1)',
@@ -1347,6 +1361,16 @@
                 },
                 options: {
                     responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    return `佔總額: ${percentages[index]}%`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -1366,7 +1390,6 @@
             const counts = [0, 0, 0, 0, 0];
             
             records.forEach(record => {
-                // 統計所有券，不考慮刪除線和已使用狀態
                 const index1 = couponValues.indexOf(record.draw1);
                 if (index1 !== -1) counts[index1]++;
                 
@@ -1377,13 +1400,16 @@
                 if (index3 !== -1) counts[index3]++;
             });
             
+            const total = counts.reduce((a, b) => a + b, 0);
+            const percentages = counts.map(count => total > 0 ? Math.round((count / total) * 100) : 0);
+            
             const ctx = document.getElementById('couponChart').getContext('2d');
             couponChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: couponValues.map(v => `MOP ${v}`),
                     datasets: [{
-                        label: '張數 (所有記錄)', // 修改標籤說明
+                        label: '張數 (所有記錄)',
                         data: counts,
                         backgroundColor: [
                             'rgba(75, 192, 192, 0.6)',
@@ -1404,6 +1430,16 @@
                 },
                 options: {
                     responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    return `佔總數: ${percentages[index]}%`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -1415,7 +1451,6 @@
                 }
             });
         }
-
 
         // 初始化時間顯示
         function updateTimeInfo() {
